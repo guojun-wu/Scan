@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import argparse
 import os
 
@@ -8,8 +6,6 @@ import numpy as np
 import pandas as pd
 import scipy.io as io
 from tqdm import tqdm
-
-import CONSTANTS as C
 
 
 def ZUCO_read_words(directory: str, task: str) -> None:

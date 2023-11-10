@@ -10,12 +10,17 @@ mkdir -p data/zuco
 pip install osfclient
 
 for zuco_data in q3zws # 2urht  # optional to also get zuco2
-# do
-    osf -p $zuco_data clone
+do
     # if [ "$zuco_data" == "2urht" ];   # optional to also get zuco2then
         for task in task1-\ SR task2\ -\ NR task3\ -\ TSR
         do
-            mv $zuco_data"/osfstorage/$task/Matlab files" "data/zuco/${task:0:5}/Matlab_files"
+            mkdir -p data/zuco/${task:0:5}
+            for subj in ZAB ZDM ZDN ZGW ZJM ZJN ZJS ZKB ZKH ZKW ZMG ZPH
+            # Loop over each subject
+            do
+                # Fetch each file
+                osf -p $zuco_data fetch "osfstorage/$task/Matlab files/results${subj}_${task: 7:8}.mat" "data/zuco/${task:0:5}/Matlab_files/results${subj}_${task: 7:8}.mat"
+            done
         done
     # else  # optional to also get zuco2
         # for task in task1\ -\ NR task2\ -\ TSR  # optional to also get zuco2
