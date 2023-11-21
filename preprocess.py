@@ -92,7 +92,7 @@ def ZUCO_read_scanpath(directory, task):
     directory = os.path.join(directory, f'task{task[-1]}', 'Matlab_files')
     word_infor_path = directory + '/Word_Infor.csv'
     word_infor_df = pd.read_csv(word_infor_path, sep='\t')
-    save_path = directory + '/scanpath.csv'
+    save_path = directory + '/newscanpath.csv'
 
     df = pd.DataFrame([], columns=['id', 'sn', 'nw', 'wn', 'fl', 'dur'])
     for file in tqdm(sorted(os.listdir(directory))):
@@ -155,6 +155,7 @@ def ZUCO_read_scanpath(directory, task):
                         ]], columns=['id', 'sn', 'nw', 'wn', 'fl', 'dur'],
                     )
                     df = pd.concat([df, df_tmp])
+            
 
         else:
             mat = h5py.File(fpath)
@@ -221,7 +222,7 @@ def load_zuco_word_and_scanpth_data(directory, task):
 
 
 def add_current_fix_interest_area_label_for_sp(task: str = 'zuco12') -> None:
-    directory = C.path_to_zuco
+    directory = 'data/'
     word_info_df, eyemovement_df = load_zuco_word_and_scanpth_data(
         directory=directory, task=task,
     )
@@ -261,9 +262,9 @@ def main() -> int:
     )
     args = parser.parse_args()
     print(f'Preparing word info for {args.zuco_task}...')
-    path_to_zuco = "data/zuco"
+    path_to_zuco = "data/"
     # create word information for all the sentences in each task, save to csv file in the same task folder
-    ZUCO_read_words(directory=path_to_zuco, task=args.zuco_task)
+    #ZUCO_read_words(directory=path_to_zuco, task=args.zuco_task)
     print(f'Preparing scanpath info for {args.zuco_task}...')
     # create scanpath information for all subjects in each task, save to csv file in the same folder
     ZUCO_read_scanpath(  # 12 subject
@@ -271,14 +272,14 @@ def main() -> int:
         task=args.zuco_task,
     )
     print(f'Preparing add fix interest area label for {args.zuco_task}...')
-    add_current_fix_interest_area_label_for_sp(task=args.zuco_task)
+    #add_current_fix_interest_area_label_for_sp(task=args.zuco_task)
     print(f'Preparing add word length for {args.zuco_task}...')
-    add_word_len(directory=C.path_to_zuco, task=args.zuco_task)
+    #add_word_len(directory=path_to_zuco, task=args.zuco_task)
     # load data, task: zuco11, zuco12, zuco21
-    word_infor_df, scanpath_df = load_zuco_word_and_scanpth_data(
-        directory=C.path_to_zuco,
-        task=args.zuco_task,
-    )
+    # word_infor_df, scanpath_df = load_zuco_word_and_scanpth_data(
+    #     directory=path_to_zuco,
+    #     task=args.zuco_task,
+    # )
 
 
 if __name__ == '__main__':
