@@ -92,7 +92,7 @@ def ZUCO_read_scanpath(directory, task):
     directory = os.path.join(directory, f'task{task[-1]}', 'Matlab_files')
     word_infor_path = directory + '/Word_Infor.csv'
     word_infor_df = pd.read_csv(word_infor_path, sep='\t')
-    save_path = directory + '/newscanpath.csv'
+    save_path = directory + '/scanpath.csv'
 
     df = pd.DataFrame([], columns=['id', 'sn', 'nw', 'wn', 'fl', 'dur'])
     for file in tqdm(sorted(os.listdir(directory))):
@@ -156,7 +156,6 @@ def ZUCO_read_scanpath(directory, task):
                     )
                     df = pd.concat([df, df_tmp])
             
-
         else:
             mat = h5py.File(fpath)
             word_bound = mat['sentenceData/wordbounds']
@@ -247,11 +246,81 @@ def add_current_fix_interest_area_label_for_sp(task: str = 'zuco12') -> None:
 
     eyemovement_df.to_csv(save_path, sep='\t', index=False)
 
+def read_sentence_content(directory, task):
+    if task.startswith('zuco1'):
+        full_subj = 'ZAB'  # subject with complete data
+        # full_subj = "ZKW"
+        directory = directory + 'zuco/'
+    elif task == 'zuco21':
+        full_subj = 'YAG'
+        directory = directory + 'zuco2/'
+    else:
+        raise NotImplementedError(f'{task=} unknown')
+    directory = os.path.join(directory, f'task{task[-1]}', 'Matlab_files')
+    save_path = directory + '/sentence_content.csv'
+    sub_file_path = {}
+    for file in sorted(os.listdir(directory)):
+        if not file.endswith('.mat'):
+            continue
+        subj = file.split('_')[0][-3:]
+        fpath = os.path.join(directory, file)
+        sub_file_path[subj] = fpath
+
+    # read sentence content
+    df = pd.DataFrame([], columns=['SN', 'CONTENT'])
+    sentence_data = io.loadmat(
+        sub_file_path[full_subj], squeeze_me=True, struct_as_record=False,
+    )['sentenceData']
+    for sn_idx in range(len(sentence_data)):
+        sn_data = sentence_data[sn_idx]
+        # print(sn_data._fieldnames)
+        df_tmp = pd.DataFrame(
+            [[sn_idx + 1, sn_data.content]],
+            columns=['SN', 'CONTENT'],
+        )
+
+        df = pd.concat([df, df_tmp])
+
+    df.to_csv(save_path, sep='\t', index=False)
+
+def get_scanpath_content(directory, task):
+    word_info_df, scanpath_df = load_zuco_word_and_scanpth_data(
+        directory=directory, task=task,
+    )
+    if task.startswith('zuco1'):
+        directory = directory + 'zuco/'
+    elif task == 'zuco21':
+        directory = directory + 'zuco2/'
+    else:
+        raise NotImplementedError(f'{task=} unknown')
+    directory = os.path.join(directory, f'task{task[-1]}', 'Matlab_files')
+    save_path = directory + '/scanpath_content.csv'
+    # only keep the rows with dur > 50 in scanpath_df
+    scanpath_df = scanpath_df[scanpath_df['dur'] > 50]
+    df = pd.DataFrame([], columns=['id', 'SN', 'CONTENT'])
+    for subj in tqdm(scanpath_df['id'].unique()):
+        for sn in scanpath_df[scanpath_df['id'] == subj]['sn'].unique():
+            # find the word by sn and nw, concatenate the word to the sentence
+            content = ''
+            for wn in scanpath_df[
+                (scanpath_df['id'] == subj) & (scanpath_df['sn'] == sn)
+            ]['wn']:
+                word = word_info_df[
+                    (word_info_df['SN'] == sn) & (word_info_df['NW'] == wn)
+                ]['WORD'].values[0]
+                content += word + ' '
+            df_tmp = pd.DataFrame(
+                [[subj, sn, content]],
+                columns=['id', 'SN', 'CONTENT'],
+            )
+            df = pd.concat([df, df_tmp])
+    df.to_csv(save_path, sep='\t', index=False)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--zuco-task',
+        '--zuco_task',
         type=str,
         choices=[
             # zuco 1
@@ -267,10 +336,14 @@ def main() -> int:
     #ZUCO_read_words(directory=path_to_zuco, task=args.zuco_task)
     print(f'Preparing scanpath info for {args.zuco_task}...')
     # create scanpath information for all subjects in each task, save to csv file in the same folder
-    ZUCO_read_scanpath(  # 12 subject
-        directory=path_to_zuco,
-        task=args.zuco_task,
-    )
+    # ZUCO_read_scanpath(  # 12 subject
+    #     directory=path_to_zuco,
+    #     task=args.zuco_task,
+    # )
+    print(f'Preparing sentence content for {args.zuco_task}...')
+    #read_sentence_content(directory=path_to_zuco, task=args.zuco_task)
+    print(f'Preparing scanpath content for {args.zuco_task}...')
+    get_scanpath_content(directory=path_to_zuco, task=args.zuco_task)
     print(f'Preparing add fix interest area label for {args.zuco_task}...')
     #add_current_fix_interest_area_label_for_sp(task=args.zuco_task)
     print(f'Preparing add word length for {args.zuco_task}...')
