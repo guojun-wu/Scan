@@ -30,7 +30,3 @@ do
         # done  # optional to also get zuco2
     # fi  # optional to also get zuco2
 done
-
-python3 -m zuco_create_wordinfor_scanpath_files --zuco-task zuco11
-python3 -m zuco_create_wordinfor_scanpath_files --zuco-task zuco12
-# python3 -m scripts.zuco_create_wordinfor_scanpath_files --zuco-task zuco21  # optional to also get zuco2
