@@ -14,7 +14,7 @@ def format_prompt(current_sn, current_id, scanpath_content, sentence_content):
             
         sentence = sentence_content.loc[(sentence_content['SN'] == sn)]['CONTENT'].values[0]
         scanpath = scanpath_content.loc[(scanpath_content['id'] == sid) & (scanpath_content['SN'] == sn)]['CONTENT'].values[0]
-        prompt += f"sentence: {sentence} scanpath: {scanpath}\n"
+        prompt += f"sentence: {sentence} scanpath: {scanpath} "
     current_sentence = sentence_content.loc[(sentence_content['SN'] == current_sn)]['CONTENT'].values[0]
     prompt += f"sentence: {current_sentence} scanpath: "
     

@@ -3,3 +3,8 @@ scipy
 numpy==1.23.4
 pandas==1.5.3
 tqdm==4.64.1
+
+torch==2.0.1
+transformers==4.29.2
+
+matplotlib
