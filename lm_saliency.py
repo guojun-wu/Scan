@@ -43,14 +43,14 @@ def register_embedding_list_hook(model, embeddings_list):
     def forward_hook(module, inputs, output):
         embeddings_list.append(output.squeeze(0).clone().cpu().detach().numpy())
     embedding_layer = model.transformer.wte
-    handle = embedding_layer.register_full_forward_hook(forward_hook)
+    handle = embedding_layer.register_forward_hook(forward_hook)
     return handle
 
 def register_embedding_gradient_hooks(model, embeddings_gradients):
     def hook_layers(module, grad_in, grad_out):
         embeddings_gradients.append(grad_out[0].detach().cpu().numpy())
     embedding_layer = model.transformer.wte
-    hook = embedding_layer.register_full_backward_hook(hook_layers)
+    hook = embedding_layer.register_backward_hook(hook_layers)
     return hook
 
 def saliency(model, input_ids, input_mask, batch=0, correct=None, foil=None):
@@ -61,16 +61,22 @@ def saliency(model, input_ids, input_mask, batch=0, correct=None, foil=None):
     handle = register_embedding_list_hook(model, embeddings_list)
     embeddings_gradients = []
     hook = register_embedding_gradient_hooks(model, embeddings_gradients)
+
+    print("input_id1", input_ids)
     
     if correct is None:
         correct = input_ids[-1]
     input_ids = input_ids[:-1]
+    print("input_id2", input_ids)
     input_mask = input_mask[:-1]
     input_ids = torch.tensor(input_ids, dtype=torch.long).to(model.device)
     input_mask = torch.tensor(input_mask, dtype=torch.long).to(model.device)
 
     model.zero_grad()
     A = model(input_ids, attention_mask=input_mask)
+
+    # print the length of A.logits 
+    print("A.logits", len(A.logits))
 
     if foil is not None and correct != foil:
         (A.logits[-1][correct]-A.logits[-1][foil]).backward()
