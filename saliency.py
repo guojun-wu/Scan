@@ -64,10 +64,11 @@ def seq_saliency(model, input_ids, input_mask, output_ids):
     # Remove hooks
     handle.remove()
     hook.remove()
-
-    return np.array(embeddings_list).squeeze(), np.array(gradients_list).squeeze()
-
     
+    gradients_list = np.array(gradients_list).squeeze()
+    embeddings_list = np.array(embeddings_list).squeeze()
+
+    return gradients_list[:-len(output_ids)], embeddings_list[:-len(output_ids)]
 
 def input_x_gradient(grads, embds, normalize=False):
     input_grad = np.sum(grads * embds, axis=-1).squeeze()
@@ -75,6 +76,9 @@ def input_x_gradient(grads, embds, normalize=False):
     if normalize:
         norm = np.linalg.norm(input_grad, ord=1)
         input_grad /= norm
+
+    # further normalize input_grad with softmax
+    input_grad = np.exp(input_grad) / np.sum(np.exp(input_grad))
         
     return input_grad
 
