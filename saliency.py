@@ -105,8 +105,8 @@ def input_x_gradient(grads, embds, normalize=False):
     if normalize:
         norm = np.linalg.norm(input_grad, ord=1)
         input_grad /= norm
-
-    # further normalize input_grad with softmax
+    
+    # softmax
     input_grad = np.exp(input_grad) / np.sum(np.exp(input_grad))
         
     return input_grad
@@ -117,6 +117,10 @@ def l1_grad_norm(grads, normalize=False):
     if normalize:
         norm = np.linalg.norm(l1_grad, ord=1)
         l1_grad /= norm
+    
+    # softmax
+    l1_grad = np.exp(l1_grad) / np.sum(np.exp(l1_grad))
+        
     return l1_grad
 
 

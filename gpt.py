@@ -15,5 +15,5 @@ input_tokens = tokenizer(input_seq)['input_ids']
 attention_ids = tokenizer(input_seq)['attention_mask']
 
 base_saliency_matrix, base_embd_matrix = seq_saliency(model, input_tokens, attention_ids, output_tokens)
-base_explanation = input_x_gradient(base_saliency_matrix, base_embd_matrix, normalize=True)
+base_explanation = l1_grad_norm(base_saliency_matrix, normalize=True)
 print(base_explanation)
