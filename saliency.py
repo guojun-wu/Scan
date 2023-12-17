@@ -18,6 +18,7 @@ plt.rcParams['figure.figsize'] = [10, 10]
 
 config = GPT2Config.from_pretrained("gpt2")
 VOCAB_SIZE = config.vocab_size
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
 # Adapted from AllenNLP Interpret and Han et al. 2020
 def register_embedding_list_hook(model, embeddings_list):
@@ -34,6 +35,33 @@ def register_embedding_gradient_hooks(model, embeddings_gradients):
     hook = embedding_layer.register_backward_hook(hook_layers)
     return hook
 
+def merge_tokens(tokens, embeddings_gradients, embeddings_list):
+    merged_embeddings = []
+    merged_gradients = []
+    word = ""
+    word_gradients = 0
+    word_embeddings = 0
+    # Merge tokens into the original words
+    for i, token in enumerate(tokens):
+        if token.startswith("Ġ") or token.startswith("Ċ"):
+            if word != "":
+                merged_gradients.append(word_gradients)
+                merged_embeddings.append(word_embeddings)
+                word = ""
+                word_gradients = 0
+                word_embeddings = 0
+            word = token[1:]
+            word_gradients = embeddings_gradients[i]
+            word_embeddings = embeddings_list[i]
+        else:
+            word += token
+            word_gradients += embeddings_gradients[i]
+            word_embeddings += embeddings_list[i]  
+    if word != "":
+        merged_gradients.append(word_gradients)
+        merged_embeddings.append(word_embeddings)
+    return np.array(merged_gradients).squeeze(), np.array(merged_embeddings).squeeze()
+           
 def seq_saliency(model, input_ids, input_mask, output_ids):
     
     torch.enable_grad()
@@ -53,8 +81,6 @@ def seq_saliency(model, input_ids, input_mask, output_ids):
 
     # Forward pass
     A = model(input_ids, attention_mask=input_mask)
-
-    
     loss = torch.nn.CrossEntropyLoss()(A.logits[-len(output_ids):].view(-1, A.logits.size(-1)), output_ids)
 
     # Backward pass
@@ -64,11 +90,14 @@ def seq_saliency(model, input_ids, input_mask, output_ids):
     # Remove hooks
     handle.remove()
     hook.remove()
-    
+
     gradients_list = np.array(gradients_list).squeeze()
     embeddings_list = np.array(embeddings_list).squeeze()
+    # Merge tokens into the original words
+    tokens = tokenizer.convert_ids_to_tokens(input_ids)
+    gradients_list, embeddings_list = merge_tokens(tokens, gradients_list, embeddings_list)
 
-    return gradients_list[:-len(output_ids)], embeddings_list[:-len(output_ids)]
+    return gradients_list, embeddings_list
 
 def input_x_gradient(grads, embds, normalize=False):
     input_grad = np.sum(grads * embds, axis=-1).squeeze()

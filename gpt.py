@@ -1,8 +1,8 @@
 from saliency import *
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 model = GPT2LMHeadModel.from_pretrained("gpt2")
-input_seq = "Can you stop the dog from" 
-output_seq = "barking loudly"
+input_seq = "Can you stop the dog from barking out-bad-act" 
+output_seq = "loudly"
 
 # tokenize output sequences
 output_tokens = tokenizer(output_seq)['input_ids']
