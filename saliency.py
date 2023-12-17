@@ -7,8 +7,6 @@ from transformers import (
     GPT2Config,
     GPT2Tokenizer,
     GPT2LMHeadModel,
-    GPTNeoForCausalLM,
-
 )
 
 import matplotlib as mpl

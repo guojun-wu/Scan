@@ -7,6 +7,7 @@ import pandas as pd
 import scipy.io as io
 from tqdm import tqdm
 
+# Adapted from ScanDL repo: https://github.com/DiLi-Lab/ScanDL
 
 def ZUCO_read_words(directory: str, task: str) -> None:
     # task: zuco11, zuco12, zuco21
@@ -336,23 +337,14 @@ def main() -> int:
     #ZUCO_read_words(directory=path_to_zuco, task=args.zuco_task)
     print(f'Preparing scanpath info for {args.zuco_task}...')
     # create scanpath information for all subjects in each task, save to csv file in the same folder
-    # ZUCO_read_scanpath(  # 12 subject
-    #     directory=path_to_zuco,
-    #     task=args.zuco_task,
-    # )
+    ZUCO_read_scanpath(  # 12 subject
+        directory=path_to_zuco,
+        task=args.zuco_task,
+    )
     print(f'Preparing sentence content for {args.zuco_task}...')
-    #read_sentence_content(directory=path_to_zuco, task=args.zuco_task)
+    read_sentence_content(directory=path_to_zuco, task=args.zuco_task)
     print(f'Preparing scanpath content for {args.zuco_task}...')
     get_scanpath_content(directory=path_to_zuco, task=args.zuco_task)
-    print(f'Preparing add fix interest area label for {args.zuco_task}...')
-    #add_current_fix_interest_area_label_for_sp(task=args.zuco_task)
-    print(f'Preparing add word length for {args.zuco_task}...')
-    #add_word_len(directory=path_to_zuco, task=args.zuco_task)
-    # load data, task: zuco11, zuco12, zuco21
-    # word_infor_df, scanpath_df = load_zuco_word_and_scanpth_data(
-    #     directory=path_to_zuco,
-    #     task=args.zuco_task,
-    # )
 
 
 if __name__ == '__main__':
