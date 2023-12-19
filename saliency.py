@@ -30,7 +30,7 @@ def register_embedding_gradient_hooks(model, embeddings_gradients):
     def hook_layers(module, grad_in, grad_out):
         embeddings_gradients.append(grad_out[0].detach().cpu().numpy())
     embedding_layer = model.transformer.wte
-    hook = embedding_layer.register_backward_hook(hook_layers)
+    hook = embedding_layer.register_full_backward_hook(hook_layers)
     return hook
 
 def merge_tokens(tokens, embeddings_gradients, embeddings_list):
@@ -60,7 +60,7 @@ def merge_tokens(tokens, embeddings_gradients, embeddings_list):
         merged_embeddings.append(word_embeddings)
     return np.array(merged_gradients).squeeze(), np.array(merged_embeddings).squeeze()
            
-def seq_saliency(model, input_ids, input_mask, output_ids):
+def lm_saliency(model, input_ids, input_mask, output_ids):
     
     torch.enable_grad()
     model.eval()
@@ -101,11 +101,10 @@ def input_x_gradient(grads, embds, normalize=False):
     input_grad = np.sum(grads * embds, axis=-1).squeeze()
 
     if normalize:
-        norm = np.linalg.norm(input_grad, ord=1)
-        input_grad /= norm
-    
-    # softmax
-    input_grad = np.exp(input_grad) / np.sum(np.exp(input_grad))
+        # norm = np.linalg.norm(input_grad, ord=1)
+        # input_grad /= norm
+        # softmax
+        input_grad = np.exp(input_grad) / np.sum(np.exp(input_grad))
         
     return input_grad
 
@@ -115,10 +114,7 @@ def l1_grad_norm(grads, normalize=False):
     if normalize:
         norm = np.linalg.norm(l1_grad, ord=1)
         l1_grad /= norm
-    
-    # softmax
-    l1_grad = np.exp(l1_grad) / np.sum(np.exp(l1_grad))
-        
+
     return l1_grad
 
 
