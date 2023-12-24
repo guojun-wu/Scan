@@ -117,7 +117,14 @@ def l1_grad_norm(grads, normalize=False):
 
     return l1_grad
 
+def euclidean_grad_norm(grads, normalize=False):
+    euclidean_grad = np.linalg.norm(grads, ord=2, axis=-1).squeeze()
 
+    if normalize:
+        norm = np.linalg.norm(euclidean_grad, ord=1)
+        euclidean_grad /= norm
+
+    return euclidean_grad
 def visualize(attention, tokenizer, input_ids, gold=None, normalize=False, print_text=True, save_file=None, title=None, figsize=60, fontsize=36):
     tokens = [tokenizer.decode(i) for i in input_ids[0][:len(attention) + 1]]
     if gold is not None:

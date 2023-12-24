@@ -47,8 +47,7 @@ def seq_saliency(input_seq, output_seq):
 def main():
     data = load_data("zuco12")
     df_saliency = pd.DataFrame(columns=["id", "sn", "x_explanation", "l1_explanation"])
-    for i in range(10):
-        print("Processing subject {} sentence {}".format(data.iloc[i]["id"], data.iloc[i]["sn"]))
+    for i in range(len(data)):
         x_explanation, l1_explanation = seq_saliency(data.iloc[i]["input"], data.iloc[i]["output"])
         # x_explanation and l1_explanation are numpy arrays
         new_row = pd.DataFrame({
