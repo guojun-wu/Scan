@@ -1,9 +1,12 @@
 import pandas as pd
 import os
 from saliency import *
+from tqdm import tqdm
 
-tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-model = GPT2LMHeadModel.from_pretrained("gpt2")
+def load_model(model_name="gpt2"):
+    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+    model = GPT2LMHeadModel.from_pretrained(model_name)
+    return tokenizer, model
 
 def load_data(task):
     if task == "zuco11":
@@ -15,7 +18,6 @@ def load_data(task):
     else:
         raise ValueError("Invalid task name")
 
-    # load data
     data = pd.DataFrame(columns=["id", "sn", "input", "output"])
     sentences = pd.read_csv(os.path.join(base_path, "sentence_content.csv"), sep="\t")
     scanpaths = pd.read_csv(os.path.join(base_path, "scanpath_content.csv"), sep="\t")
@@ -28,33 +30,31 @@ def load_data(task):
         data = pd.concat([data, pd.DataFrame({"id": subject, "sn": sn, "input": input_seq, "output": output_seq}, index=[0])], ignore_index=True)
     return data
 
-def seq_saliency(input_seq, output_seq):
-    # tokenize output sequences
+def seq_saliency(input_seq, output_seq, model_name="gpt2"):
+    tokenizer, model = load_model(model_name)
     output_tokens = tokenizer(output_seq)['input_ids']
-
-    # add whitespace to input_seq for tokens in output_seq
     input_seq = input_seq.strip() + " " * (len(output_tokens))
 
-    # tokenize input sequence
     input_tokens = tokenizer(input_seq)['input_ids']
     attention_ids = tokenizer(input_seq)['attention_mask']
 
-    saliency_matrix, embd_matrix = lm_saliency(model, input_tokens, attention_ids, output_tokens)
-    x_explanation = input_x_gradient(saliency_matrix, embd_matrix, normalize=True)
-    l1_explanation = l1_grad_norm(saliency_matrix, normalize=True)
-    return x_explanation, l1_explanation
+    tokens, saliency_matrix, embd_matrix = lm_saliency(model, tokenizer, input_tokens, attention_ids, output_tokens)
+    x_grad = input_x_gradient(tokens, saliency_matrix, embd_matrix, normalize=True)
+    l1_grad = l1_grad_norm(tokens, saliency_matrix, normalize=True)
+    l2_grad = l2_grad_norm(tokens, saliency_matrix, normalize=True)
+    return x_grad, l1_grad, l2_grad
 
 def main():
     data = load_data("zuco12")
-    df_saliency = pd.DataFrame(columns=["id", "sn", "x_explanation", "l1_explanation"])
-    for i in range(len(data)):
-        x_explanation, l1_explanation = seq_saliency(data.iloc[i]["input"], data.iloc[i]["output"])
-        # x_explanation and l1_explanation are numpy arrays
+    df_saliency = pd.DataFrame(columns=["id", "sn", "x_grad", "l1_grad", "l2_grad"])
+    for i in tqdm(range(len(data))):
+        x_grad, l1_grad, l2_grad = seq_saliency(data.iloc[i]["input"], data.iloc[i]["output"])
         new_row = pd.DataFrame({
             "id": [data.iloc[i]["id"]],
             "sn": [data.iloc[i]["sn"]],
-            "x_explanation": [x_explanation.tolist()],
-            "l1_explanation": [l1_explanation.tolist()]
+            "x_grad": [x_grad.tolist()],
+            "l1_grad": [l1_grad.tolist()],
+            "l2_grad": [l2_grad.tolist()]
         })
         df_saliency = pd.concat([df_saliency, new_row], ignore_index=True)
     df_saliency.to_csv("data/zuco/task2/saliency.csv", index=False)
