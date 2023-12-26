@@ -7,8 +7,10 @@ import matplotlib.pyplot as plt
 from transformers import (
      GPT2Tokenizer, 
      GPT2LMHeadModel,
+     GPT2Config,
      BertTokenizer,
      BertForMaskedLM,
+        BertConfig,
 )
 
 plt.rcParams['figure.figsize'] = [10, 10]

@@ -1,11 +1,20 @@
 import pandas as pd
+import argparse 
 import os
 from saliency import *
 from tqdm import tqdm
 
-def load_model(model_name="gpt2"):
-    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
-    model = GPT2LMHeadModel.from_pretrained(model_name)
+def load_model(model_name="gpt2", control=False):
+    if model_name == "gpt2":
+        tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+        if control:
+            # random init
+            config = GPT2Config()
+            model = GPT2LMHeadModel(config)
+        else:
+            model = GPT2LMHeadModel.from_pretrained(model_name)
+    else:
+        raise ValueError("Invalid model name")
     return tokenizer, model
 
 def load_data(task):
@@ -30,8 +39,8 @@ def load_data(task):
         data = pd.concat([data, pd.DataFrame({"id": subject, "sn": sn, "input": input_seq, "output": output_seq}, index=[0])], ignore_index=True)
     return data
 
-def seq_saliency(input_seq, output_seq, model_name="gpt2"):
-    tokenizer, model = load_model(model_name)
+def seq_saliency(input_seq, output_seq, tokenizer, model):
+    
     output_tokens = tokenizer(output_seq)['input_ids']
     input_seq = input_seq.strip() + " " * (len(output_tokens))
 
@@ -45,10 +54,20 @@ def seq_saliency(input_seq, output_seq, model_name="gpt2"):
     return x_grad, l1_grad, l2_grad
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m","--model_name", type=str, default="gpt2")
+    parser.add_argument('--control', action='store_true', help='control mode')
+    args = parser.parse_args()
+    model_name = args.model_name
+    control = args.control
+    
+    tokenizer, model = load_model(model_name, control=control)
+
     data = load_data("zuco12")
     df_saliency = pd.DataFrame(columns=["id", "sn", "x_grad", "l1_grad", "l2_grad"])
     for i in tqdm(range(len(data))):
-        x_grad, l1_grad, l2_grad = seq_saliency(data.iloc[i]["input"], data.iloc[i]["output"])
+        x_grad, l1_grad, l2_grad = seq_saliency(data.iloc[i]["input"], 
+                                    data.iloc[i]["output"], tokenizer, model)
         new_row = pd.DataFrame({
             "id": [data.iloc[i]["id"]],
             "sn": [data.iloc[i]["sn"]],
@@ -57,7 +76,11 @@ def main():
             "l2_grad": [l2_grad.tolist()]
         })
         df_saliency = pd.concat([df_saliency, new_row], ignore_index=True)
-    df_saliency.to_csv("data/zuco/task2/saliency.csv", index=False)
+    if not control:
+        output_path = f"data/zuco/task2/{model_name}_saliency.csv"
+    else:
+        output_path = f"data/zuco/task2/{model_name}_control_saliency.csv"
+    df_saliency.to_csv(output_path, index=False)
 
 if __name__ == "__main__":
     main()
