@@ -1,5 +1,6 @@
 import argparse, json
 import random
+import string
 import torch
 import numpy as np
 import matplotlib as mpl
@@ -19,18 +20,25 @@ plt.rcParams['figure.figsize'] = [10, 10]
 def register_embedding_list_hook(model, embeddings_list):
     def forward_hook(module, inputs, output):
         embeddings_list.append(output.squeeze(0).clone().cpu().detach().numpy())
-    embedding_layer = model.transformer.wte
+    if isinstance(model, GPT2LMHeadModel):
+        embedding_layer = model.transformer.wte
+    elif isinstance(model, BertForMaskedLM):
+        embedding_layer = model.bert.embeddings.word_embeddings
     handle = embedding_layer.register_forward_hook(forward_hook)
     return handle
 
 def register_embedding_gradient_hooks(model, embeddings_gradients):
     def hook_layers(module, grad_in, grad_out):
         embeddings_gradients.append(grad_out[0].detach().cpu().numpy())
-    embedding_layer = model.transformer.wte
+    
+    if isinstance(model, GPT2LMHeadModel):
+        embedding_layer = model.transformer.wte
+    elif isinstance(model, BertForMaskedLM):
+        embedding_layer = model.bert.embeddings.word_embeddings
     hook = embedding_layer.register_full_backward_hook(hook_layers)
     return hook
 
-def merge_tokens(tokens, gradients):
+def merge_gpt_tokens(tokens, gradients):
     merged_gradients = []
     word = ""
     word_gradients = 0
@@ -50,6 +58,32 @@ def merge_tokens(tokens, gradients):
         merged_gradients.append(word_gradients)
     return np.array(merged_gradients).squeeze()
 
+def merge_bert_tokens(tokens, gradients, special_tokens=["[CLS]", "[SEP]", "[MASK]"]):
+    merged_gradients = []
+    word = ""
+    word_gradients = 0
+    # Merge tokens into the original words
+    for i, token in enumerate(tokens):
+        if token in special_tokens:
+            continue
+        if token.startswith("##"):
+            word += token[2:]
+            word_gradients += gradients[i]
+        else:
+            if token in string.punctuation:
+                word += token
+                word_gradients += gradients[i]
+            else:
+                if word != "":
+                    merged_gradients.append(word_gradients)
+                    word = ""
+                    word_gradients = 0
+                word = token
+                word_gradients = gradients[i]
+    if word != "":
+        merged_gradients.append(word_gradients)
+    return np.array(merged_gradients).squeeze()
+
 def lm_saliency(model, tokenizer, input_ids, input_mask, output_ids):
 
     torch.enable_grad()
@@ -61,13 +95,14 @@ def lm_saliency(model, tokenizer, input_ids, input_mask, output_ids):
     # Convert input_ids and attention_mask to PyTorch tensors
     input_ids = torch.tensor(input_ids, dtype=torch.long).to(model.device)
     input_mask = torch.tensor(input_mask, dtype=torch.long).to(model.device)
-    output_ids = torch.tensor(output_ids, dtype=torch.long).to(model.device)
+    output_ids = torch.tensor(output_ids, dtype=torch.long)
 
     handle = register_embedding_list_hook(model, embeddings_list)
     hook = register_embedding_gradient_hooks(model, gradients_list)
 
-    A = model(input_ids, attention_mask=input_mask)
-    loss = torch.nn.CrossEntropyLoss()(A.logits[-len(output_ids):].view(-1, A.logits.size(-1)), output_ids)
+    A = model(input_ids.unsqueeze(0), attention_mask=input_mask.unsqueeze(0))
+    loss = torch.nn.CrossEntropyLoss()(
+        A.logits[:, -len(output_ids):, :].view(-1, A.logits.size(-1)), output_ids)
 
     model.zero_grad()
     loss.backward()
@@ -82,28 +117,37 @@ def lm_saliency(model, tokenizer, input_ids, input_mask, output_ids):
 
     return tokens, gradients_list, embeddings_list
 
-def input_x_gradient(tokens, grads, embds, normalize=False):
+def input_x_gradient(tokens, grads, embds, model, normalize=False):
     input_grad = np.sum(grads * embds, axis=-1).squeeze()
-        
-    input_grad = merge_tokens(tokens, input_grad)
+
+    if isinstance(model, GPT2LMHeadModel):
+        input_grad = merge_gpt_tokens(tokens, input_grad)
+    elif isinstance(model, BertForMaskedLM):
+        input_grad = merge_bert_tokens(tokens, input_grad)
     if normalize:
         input_grad = np.exp(input_grad) / np.sum(np.exp(input_grad))
   
     return input_grad
 
-def l1_grad_norm(tokens, grads, normalize=False):
+def l1_grad_norm(tokens, grads, model, normalize=False):
     l1_grad = np.linalg.norm(grads, ord=1, axis=-1).squeeze()
         
-    l1_grad = merge_tokens(tokens, l1_grad)
+    if isinstance(model, GPT2LMHeadModel):
+        l1_grad = merge_gpt_tokens(tokens, l1_grad)
+    elif isinstance(model, BertForMaskedLM):
+        l1_grad = merge_bert_tokens(tokens, l1_grad)
     if normalize:
         norm = np.linalg.norm(l1_grad, ord=1)
         l1_grad /= norm
     return l1_grad
 
-def l2_grad_norm(tokens, grads, normalize=False):
+def l2_grad_norm(tokens, grads, model, normalize=False):
     l2_grad = np.linalg.norm(grads, ord=2, axis=-1).squeeze()
 
-    l2_grad = merge_tokens(tokens, l2_grad)
+    if isinstance(model, GPT2LMHeadModel):
+        l2_grad = merge_gpt_tokens(tokens, l2_grad)
+    elif isinstance(model, BertForMaskedLM):
+        l2_grad = merge_bert_tokens(tokens, l2_grad)
     
     if normalize:
         norm = np.linalg.norm(l2_grad, ord=1)

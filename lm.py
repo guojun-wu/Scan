@@ -13,6 +13,14 @@ def load_model(model_name="gpt2", control=False):
             model = GPT2LMHeadModel(config)
         else:
             model = GPT2LMHeadModel.from_pretrained(model_name)
+    elif model_name == "bert":
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        if control:
+            # random init
+            config = BertConfig()
+            model = BertForMaskedLM(config)
+        else:
+            model = BertForMaskedLM.from_pretrained('bert-base-uncased')
     else:
         raise ValueError("Invalid model name")
     return tokenizer, model
@@ -42,21 +50,25 @@ def load_data(task):
 def seq_saliency(input_seq, output_seq, tokenizer, model):
     
     output_tokens = tokenizer(output_seq)['input_ids']
-    input_seq = input_seq.strip() + " " * (len(output_tokens))
+    if isinstance(model, GPT2LMHeadModel):
+        input_seq = input_seq.strip() + " " * len(output_tokens)
+    elif isinstance(model, BertForMaskedLM):
+        input_seq = input_seq.strip() + "[MASK]" * len(output_tokens)
 
     input_tokens = tokenizer(input_seq)['input_ids']
     attention_ids = tokenizer(input_seq)['attention_mask']
 
     tokens, saliency_matrix, embd_matrix = lm_saliency(model, tokenizer, input_tokens, attention_ids, output_tokens)
-    x_grad = input_x_gradient(tokens, saliency_matrix, embd_matrix, normalize=True)
-    l1_grad = l1_grad_norm(tokens, saliency_matrix, normalize=True)
-    l2_grad = l2_grad_norm(tokens, saliency_matrix, normalize=True)
+    x_grad = input_x_gradient(tokens, saliency_matrix, embd_matrix, model, normalize=True)
+    l1_grad = l1_grad_norm(tokens, saliency_matrix, model, normalize=True)
+    l2_grad = l2_grad_norm(tokens, saliency_matrix, model, normalize=True)
     return x_grad, l1_grad, l2_grad
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m","--model_name", type=str, default="gpt2")
+    parser.add_argument('-m','--model_name', type=str, default='gpt2')
     parser.add_argument('--control', action='store_true', help='control mode')
+    parser.add_argument('--test', action='store_true', help='test mode')
     args = parser.parse_args()
     model_name = args.model_name
     control = args.control
@@ -65,6 +77,8 @@ def main():
 
     data = load_data("zuco12")
     df_saliency = pd.DataFrame(columns=["id", "sn", "x_grad", "l1_grad", "l2_grad"])
+    if args.test:
+        data = data[:10]
     for i in tqdm(range(len(data))):
         x_grad, l1_grad, l2_grad = seq_saliency(data.iloc[i]["input"], 
                                     data.iloc[i]["output"], tokenizer, model)
