@@ -34,7 +34,7 @@ def avergae_saliency(path):
 def main():
     path = "data/zuco/task2/fixation.csv"
     df_fixation = average_fixation(path)
-    path = "data/zuco/task2/saliency.csv"
+    path = "data/zuco/task2/bert_saliency.csv"
     df_saliency = avergae_saliency(path)
     # compute spearman correlation between fixation and saliency
     df = pd.merge(df_fixation, df_saliency, on="sn")
@@ -50,6 +50,9 @@ def main():
     spearman_l2 = []
 
     for i in range(len(fixation)):
+        if len(fixation[i]) != len(l1_explanation[i]):
+            print(i)
+            continue
         spearman_x.append(scipy.stats.spearmanr(fixation[i], x_explanation[i])[0])
         spearman_l1.append(scipy.stats.spearmanr(fixation[i], l1_explanation[i])[0])
         spearman_l2.append(scipy.stats.spearmanr(fixation[i], l2_explanation[i])[0])

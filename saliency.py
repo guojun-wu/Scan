@@ -58,8 +58,40 @@ def merge_gpt_tokens(tokens, gradients):
         merged_gradients.append(word_gradients)
     return np.array(merged_gradients).squeeze()
 
-def merge_bert_tokens(tokens, gradients, special_tokens=["[CLS]", "[SEP]", "[MASK]"]):
+def merge_further(word_list, text, gradients):
+    original_wrods = text.lower().split()
+    merged_word_list = []
     merged_gradients = []
+    tmp = ""
+    word_gradients = 0
+    word_count = 0
+    
+    for target in original_wrods:     
+        for i, word in enumerate(word_list[word_count:]):
+            if word == target:
+                merged_word_list.append(word)
+                merged_gradients.append(gradients[i])
+                word_count += 1
+                break
+            elif word in target:
+                tmp += word
+                word_gradients += gradients[i]
+                word_count += 1
+            else:
+                merged_word_list.append(tmp)
+                merged_gradients.append(word_gradients)
+                tmp = ""
+                word_gradients = 0
+                break
+    if tmp != "":
+        merged_word_list.append(tmp)
+        merged_gradients.append(word_gradients)
+                
+    return merged_gradients, merged_word_list
+
+def merge_bert_tokens(tokens, text, gradients, special_tokens=["[CLS]", "[SEP]", "[MASK]"]):
+    gradients_list = []
+    word_list = []
     word = ""
     word_gradients = 0
     # Merge tokens into the original words
@@ -70,18 +102,20 @@ def merge_bert_tokens(tokens, gradients, special_tokens=["[CLS]", "[SEP]", "[MAS
             word += token[2:]
             word_gradients += gradients[i]
         else:
-            if token in string.punctuation:
-                word += token
-                word_gradients += gradients[i]
-            else:
-                if word != "":
-                    merged_gradients.append(word_gradients)
+            if word != "":
+                    word_list.append(word)
+                    gradients_list.append(word_gradients)
                     word = ""
                     word_gradients = 0
-                word = token
-                word_gradients = gradients[i]
+            word = token
+            word_gradients = gradients[i]
     if word != "":
-        merged_gradients.append(word_gradients)
+        word_list.append(word)
+        gradients_list.append(word_gradients)
+    # Merge further the words into the original text
+
+    merged_gradients, merged_word_list = merge_further(word_list, text, gradients_list)
+
     return np.array(merged_gradients).squeeze()
 
 def lm_saliency(model, tokenizer, input_ids, input_mask, output_ids):
@@ -117,37 +151,37 @@ def lm_saliency(model, tokenizer, input_ids, input_mask, output_ids):
 
     return tokens, gradients_list, embeddings_list
 
-def input_x_gradient(tokens, grads, embds, model, normalize=False):
+def input_x_gradient(tokens, input_text, grads, embds, model, normalize=False):
     input_grad = np.sum(grads * embds, axis=-1).squeeze()
 
     if isinstance(model, GPT2LMHeadModel):
         input_grad = merge_gpt_tokens(tokens, input_grad)
     elif isinstance(model, BertForMaskedLM):
-        input_grad = merge_bert_tokens(tokens, input_grad)
+        input_grad = merge_bert_tokens(tokens, input_text, input_grad)
     if normalize:
         input_grad = np.exp(input_grad) / np.sum(np.exp(input_grad))
   
     return input_grad
 
-def l1_grad_norm(tokens, grads, model, normalize=False):
+def l1_grad_norm(tokens, input_text, grads, model, normalize=False):
     l1_grad = np.linalg.norm(grads, ord=1, axis=-1).squeeze()
         
     if isinstance(model, GPT2LMHeadModel):
         l1_grad = merge_gpt_tokens(tokens, l1_grad)
     elif isinstance(model, BertForMaskedLM):
-        l1_grad = merge_bert_tokens(tokens, l1_grad)
+        l1_grad = merge_bert_tokens(tokens, input_text, l1_grad)
     if normalize:
         norm = np.linalg.norm(l1_grad, ord=1)
         l1_grad /= norm
     return l1_grad
 
-def l2_grad_norm(tokens, grads, model, normalize=False):
+def l2_grad_norm(tokens, input_text, grads, model, normalize=False):
     l2_grad = np.linalg.norm(grads, ord=2, axis=-1).squeeze()
 
     if isinstance(model, GPT2LMHeadModel):
         l2_grad = merge_gpt_tokens(tokens, l2_grad)
     elif isinstance(model, BertForMaskedLM):
-        l2_grad = merge_bert_tokens(tokens, l2_grad)
+        l2_grad = merge_bert_tokens(tokens, input_text, l2_grad)
     
     if normalize:
         norm = np.linalg.norm(l2_grad, ord=1)

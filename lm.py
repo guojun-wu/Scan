@@ -47,21 +47,21 @@ def load_data(task):
         data = pd.concat([data, pd.DataFrame({"id": subject, "sn": sn, "input": input_seq, "output": output_seq}, index=[0])], ignore_index=True)
     return data
 
-def seq_saliency(input_seq, output_seq, tokenizer, model):
+def seq_saliency(input_text, output_seq, tokenizer, model):
     
     output_tokens = tokenizer(output_seq)['input_ids']
     if isinstance(model, GPT2LMHeadModel):
-        input_seq = input_seq.strip() + " " * len(output_tokens)
+        input_seq = input_text.strip() + " " * len(output_tokens)
     elif isinstance(model, BertForMaskedLM):
-        input_seq = input_seq.strip() + "[MASK]" * len(output_tokens)
+        input_seq = input_text.strip() + "[MASK]" * len(output_tokens)
 
     input_tokens = tokenizer(input_seq)['input_ids']
     attention_ids = tokenizer(input_seq)['attention_mask']
 
     tokens, saliency_matrix, embd_matrix = lm_saliency(model, tokenizer, input_tokens, attention_ids, output_tokens)
-    x_grad = input_x_gradient(tokens, saliency_matrix, embd_matrix, model, normalize=True)
-    l1_grad = l1_grad_norm(tokens, saliency_matrix, model, normalize=True)
-    l2_grad = l2_grad_norm(tokens, saliency_matrix, model, normalize=True)
+    x_grad = input_x_gradient(tokens, input_text, saliency_matrix, embd_matrix, model, normalize=True)
+    l1_grad = l1_grad_norm(tokens, input_text, saliency_matrix, model, normalize=True)
+    l2_grad = l2_grad_norm(tokens, input_text, saliency_matrix, model, normalize=True)
     return x_grad, l1_grad, l2_grad
 
 def main():
