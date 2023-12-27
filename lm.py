@@ -23,6 +23,8 @@ def load_model(model_name="gpt2", control=False):
             model = BertForMaskedLM.from_pretrained('bert-base-uncased')
     else:
         raise ValueError("Invalid model name")
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    model.to(device)
     return tokenizer, model
 
 def load_data(task):
@@ -53,7 +55,7 @@ def seq_saliency(input_text, output_seq, tokenizer, model):
     if isinstance(model, GPT2LMHeadModel):
         input_seq = input_text.strip() + " " * len(output_tokens)
     elif isinstance(model, BertForMaskedLM):
-        input_seq = input_text.strip() + "[MASK]" * len(output_tokens)
+        input_seq = input_text.strip() + " [MASK]" * len(output_tokens)
 
     input_tokens = tokenizer(input_seq)['input_ids']
     attention_ids = tokenizer(input_seq)['attention_mask']
@@ -66,6 +68,7 @@ def seq_saliency(input_text, output_seq, tokenizer, model):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-t','--task', type=str, default='zuco12')
     parser.add_argument('-m','--model_name', type=str, default='gpt2')
     parser.add_argument('--control', action='store_true', help='control mode')
     parser.add_argument('--test', action='store_true', help='test mode')
@@ -75,7 +78,8 @@ def main():
     
     tokenizer, model = load_model(model_name, control=control)
 
-    data = load_data("zuco12")
+    data = load_data(args.task)
+    task_dict = {"zuco11": "task1", "zuco12": "task2"}
     df_saliency = pd.DataFrame(columns=["id", "sn", "x_grad", "l1_grad", "l2_grad"])
     if args.test:
         data = data[:10]
@@ -91,9 +95,9 @@ def main():
         })
         df_saliency = pd.concat([df_saliency, new_row], ignore_index=True)
     if not control:
-        output_path = f"data/zuco/task2/{model_name}_saliency.csv"
+        output_path = f"data/zuco/{task_dict[args.task]}/{model_name}_saliency.csv"
     else:
-        output_path = f"data/zuco/task2/{model_name}_control_saliency.csv"
+        output_path = f"data/zuco/{task_dict[args.task]}/{model_name}_control_saliency.csv"
     df_saliency.to_csv(output_path, index=False)
 
 if __name__ == "__main__":

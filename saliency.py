@@ -67,15 +67,15 @@ def merge_further(word_list, text, gradients):
     word_count = 0
     
     for target in original_wrods:     
-        for i, word in enumerate(word_list[word_count:]):
+        for word in word_list[word_count:]:
             if word == target:
                 merged_word_list.append(word)
-                merged_gradients.append(gradients[i])
+                merged_gradients.append(gradients[word_count])
                 word_count += 1
                 break
             elif word in target:
                 tmp += word
-                word_gradients += gradients[i]
+                word_gradients += gradients[word_count]
                 word_count += 1
             else:
                 merged_word_list.append(tmp)
@@ -103,10 +103,10 @@ def merge_bert_tokens(tokens, text, gradients, special_tokens=["[CLS]", "[SEP]",
             word_gradients += gradients[i]
         else:
             if word != "":
-                    word_list.append(word)
-                    gradients_list.append(word_gradients)
-                    word = ""
-                    word_gradients = 0
+                word_list.append(word)
+                gradients_list.append(word_gradients)
+                word = ""
+                word_gradients = 0
             word = token
             word_gradients = gradients[i]
     if word != "":
@@ -129,7 +129,7 @@ def lm_saliency(model, tokenizer, input_ids, input_mask, output_ids):
     # Convert input_ids and attention_mask to PyTorch tensors
     input_ids = torch.tensor(input_ids, dtype=torch.long).to(model.device)
     input_mask = torch.tensor(input_mask, dtype=torch.long).to(model.device)
-    output_ids = torch.tensor(output_ids, dtype=torch.long)
+    output_ids = torch.tensor(output_ids, dtype=torch.long).to(model.device)
 
     handle = register_embedding_list_hook(model, embeddings_list)
     hook = register_embedding_gradient_hooks(model, gradients_list)
@@ -159,6 +159,7 @@ def input_x_gradient(tokens, input_text, grads, embds, model, normalize=False):
     elif isinstance(model, BertForMaskedLM):
         input_grad = merge_bert_tokens(tokens, input_text, input_grad)
     if normalize:
+        # softmax
         input_grad = np.exp(input_grad) / np.sum(np.exp(input_grad))
   
     return input_grad
@@ -170,9 +171,11 @@ def l1_grad_norm(tokens, input_text, grads, model, normalize=False):
         l1_grad = merge_gpt_tokens(tokens, l1_grad)
     elif isinstance(model, BertForMaskedLM):
         l1_grad = merge_bert_tokens(tokens, input_text, l1_grad)
+    
     if normalize:
         norm = np.linalg.norm(l1_grad, ord=1)
         l1_grad /= norm
+    
     return l1_grad
 
 def l2_grad_norm(tokens, input_text, grads, model, normalize=False):
