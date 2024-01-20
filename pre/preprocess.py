@@ -334,17 +334,17 @@ def main() -> int:
     print(f'Preparing word info for {args.zuco_task}...')
     path_to_zuco = "data/"
     # create word information for all the sentences in each task, save to csv file in the same task folder
-    ZUCO_read_words(directory=path_to_zuco, task=args.zuco_task)
-    print(f'Preparing scanpath info for {args.zuco_task}...')
-    # create scanpath information for all subjects in each task, save to csv file in the same folder
-    ZUCO_read_scanpath(  # 12 subject
-        directory=path_to_zuco,
-        task=args.zuco_task,
-    )
+    # ZUCO_read_words(directory=path_to_zuco, task=args.zuco_task)
+    # print(f'Preparing scanpath info for {args.zuco_task}...')
+    # # create scanpath information for all subjects in each task, save to csv file in the same folder
+    # ZUCO_read_scanpath(  # 12 subject
+    #     directory=path_to_zuco,
+    #     task=args.zuco_task,
+    # )
     print(f'Preparing sentence content for {args.zuco_task}...')
     read_sentence_content(directory=path_to_zuco, task=args.zuco_task)
-    print(f'Preparing scanpath content for {args.zuco_task}...')
-    get_scanpath_content(directory=path_to_zuco, task=args.zuco_task)
+    # print(f'Preparing scanpath content for {args.zuco_task}...')
+    # get_scanpath_content(directory=path_to_zuco, task=args.zuco_task)
 
 
 if __name__ == '__main__':

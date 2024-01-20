@@ -13,6 +13,8 @@ def average_fixation(path):
     for sentence in sentences:
         df_sentence = df[df['sn'] == sentence]
         df_tmp = df_sentence['list_dur'].apply(ast.literal_eval)
+        # normalize the fixation duration
+        df_tmp = df_tmp.apply(lambda x: [i/sum(x) for i in x])
         avg_dur = np.mean(df_tmp.values.tolist(), axis=0)
         df_avg = pd.concat([df_avg, pd.DataFrame({'sn': sentence, 'list_dur': [avg_dur.tolist()]})], ignore_index=True)
     return df_avg
