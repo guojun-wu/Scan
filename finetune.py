@@ -14,6 +14,7 @@ class CustomDataset(Dataset):
         self.labels = labels
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.label_mapping = {0: 0, 2: 1, 4: 2}
 
     def __len__(self):
         return len(self.texts)
@@ -23,7 +24,7 @@ class CustomDataset(Dataset):
         item = {
             'input_ids': encoding['input_ids'].squeeze(),
             'attention_mask': encoding['attention_mask'].squeeze(),
-            'labels': torch.tensor(self.labels[idx], dtype=torch.long)
+            'labels': torch.tensor(self.label_mapping[self.labels[idx]], dtype=torch.long)
         }
         return item
     def collate_fn(self, batch):
@@ -107,8 +108,8 @@ def train():
 
                 all_val_preds.extend(val_preds)
                 all_val_labels.extend(val_labels)
-        print(all_val_preds[:10])
-        print(all_val_labels[:10])
+        print(all_val_preds[:50])
+        print(all_val_labels[:50])
         val_accuracy = accuracy_score(all_val_labels, all_val_preds)
         print(f'Validation Accuracy: {val_accuracy}')
 
@@ -123,7 +124,6 @@ def train():
             print(f'Early stopping after {epoch + 1} epochs without improvement.')
             break
 
-        # Optional: Adjust learning rate
         scheduler.step()
 
     # Save the fine-tuned model

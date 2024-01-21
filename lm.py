@@ -4,10 +4,10 @@ import os
 from saliency import *
 from tqdm import tqdm
 
-def load_model(model_name="gpt2", control=False):
+def load_model(model_name="gpt2", tuned=False):
     if model_name == "gpt2":
         tokenizer = GPT2Tokenizer.from_pretrained(model_name)
-        if control:
+        if tuned:
             # random init
             config = GPT2Config()
             model = GPT2LMHeadModel(config)
@@ -15,12 +15,10 @@ def load_model(model_name="gpt2", control=False):
             model = GPT2LMHeadModel.from_pretrained(model_name)
     elif model_name == "bert":
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-        if control:
-            # random init
-            config = BertConfig()
-            model = BertForMaskedLM(config)
+        if tuned:
+            model = BertForSequenceClassification.from_pretrained('checkpoints/sst_bert', num_labels=3)
         else:
-            model = BertForMaskedLM.from_pretrained('bert-base-uncased')
+            model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)
     else:
         raise ValueError("Invalid model name")
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -29,72 +27,56 @@ def load_model(model_name="gpt2", control=False):
 
 def load_data(task):
     if task == "zuco11":
-        base_path = "data/zuco/task1/Matlab_files"
-    elif task == "zuco12":
-        base_path = "data/zuco/task2/Matlab_files"
-    elif task == "zuco13":
-        base_path = "data/zuco/task3/Matlab_files"
+        test_df = pd.read_csv("data/sst/test.csv", sep=",")
     else:
         raise ValueError("Invalid task name")
 
-    data = pd.DataFrame(columns=["id", "sn", "input", "output"])
-    sentences = pd.read_csv(os.path.join(base_path, "sentence_content.csv"), sep="\t")
-    scanpaths = pd.read_csv(os.path.join(base_path, "scanpath_content.csv"), sep="\t")
-    # loop based on id and sn in scanpaths
-    for i in range(len(scanpaths)):
-        subject = scanpaths.iloc[i]["id"]
-        sn = scanpaths.iloc[i]["SN"]
-        input_seq = sentences[sentences["SN"] == sn]["CONTENT"].values[0]
-        output_seq = scanpaths.iloc[i]["CONTENT"]
-        data = pd.concat([data, pd.DataFrame({"id": subject, "sn": sn, "input": input_seq, "output": output_seq}, index=[0])], ignore_index=True)
-    return data
+    return test_df
 
-def seq_saliency(input_text, output_seq, tokenizer, model):
+def seq_saliency(text, label, tokenizer, model):
+    label_mapping = {0: 0, 2: 1, 4: 2}
+    label_id = label_mapping[label]
     
-    output_tokens = tokenizer(output_seq)['input_ids']
-    if isinstance(model, GPT2LMHeadModel):
-        input_seq = input_text.strip() + " " * len(output_tokens)
-    elif isinstance(model, BertForMaskedLM):
-        input_seq = input_text.strip() + " [MASK]" * len(output_tokens)
+    input_text = text.strip()
+    inputs = tokenizer(input_text, return_tensors="pt")
 
-    input_tokens = tokenizer(input_seq)['input_ids']
-    attention_ids = tokenizer(input_seq)['attention_mask']
+    input_tokens = inputs["input_ids"].squeeze().tolist()
+    attention_ids = inputs["attention_mask"].squeeze().tolist()
 
-    tokens, saliency_matrix, embd_matrix = lm_saliency(model, tokenizer, input_tokens, attention_ids, output_tokens)
-    x_grad = input_x_gradient(tokens, input_text, saliency_matrix, embd_matrix, model, normalize=True)
-    l1_grad = l1_grad_norm(tokens, input_text, saliency_matrix, model, normalize=True)
-    l2_grad = l2_grad_norm(tokens, input_text, saliency_matrix, model, normalize=True)
+    tokens, saliency_matrix, embd_matrix = lm_saliency(model, tokenizer, input_tokens, attention_ids, label_id)
+    x_grad = input_x_gradient(tokens, text, saliency_matrix, embd_matrix, model, normalize=True)
+    l1_grad = l1_grad_norm(tokens, text, saliency_matrix, model, normalize=True)
+    l2_grad = l2_grad_norm(tokens, text, saliency_matrix, model, normalize=True)
     return x_grad, l1_grad, l2_grad
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-t','--task', type=str, default='zuco12')
     parser.add_argument('-m','--model_name', type=str, default='gpt2')
-    parser.add_argument('--control', action='store_true', help='control mode')
+    parser.add_argument('--tuned', action='store_true', help='finetuned model')
     parser.add_argument('--test', action='store_true', help='test mode')
     args = parser.parse_args()
     model_name = args.model_name
-    control = args.control
+    tuned = args.tuned
     
-    tokenizer, model = load_model(model_name, control=control)
+    tokenizer, model = load_model(model_name, tuned=tuned)
+    num_labels = model.config.num_labels    
 
     data = load_data(args.task)
     task_dict = {"zuco11": "task1", "zuco12": "task2"}
-    df_saliency = pd.DataFrame(columns=["id", "sn", "x_grad", "l1_grad", "l2_grad"])
+    df_saliency = pd.DataFrame(columns=["sid", "x_grad", "l1_grad", "l2_grad"])
     if args.test:
         data = data[:10]
     for i in tqdm(range(len(data))):
-        x_grad, l1_grad, l2_grad = seq_saliency(data.iloc[i]["input"], 
-                                    data.iloc[i]["output"], tokenizer, model)
+        x_grad, l1_grad, l2_grad = seq_saliency(data.iloc[i]["text"], data.iloc[i]["label"], tokenizer, model)
         new_row = pd.DataFrame({
-            "id": [data.iloc[i]["id"]],
-            "sn": [data.iloc[i]["sn"]],
+            "sid": [data.iloc[i]["sid"]],
             "x_grad": [x_grad.tolist()],
             "l1_grad": [l1_grad.tolist()],
             "l2_grad": [l2_grad.tolist()]
         })
         df_saliency = pd.concat([df_saliency, new_row], ignore_index=True)
-    if not control:
+    if tuned:
         output_path = f"data/zuco/{task_dict[args.task]}/{model_name}_saliency.csv"
     else:
         output_path = f"data/zuco/{task_dict[args.task]}/{model_name}_control_saliency.csv"

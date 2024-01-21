@@ -10,7 +10,7 @@ from transformers import (
      GPT2LMHeadModel,
      GPT2Config,
      BertTokenizer,
-     BertForMaskedLM,
+     BertForSequenceClassification,
         BertConfig,
 )
 
@@ -22,7 +22,7 @@ def register_embedding_list_hook(model, embeddings_list):
         embeddings_list.append(output.squeeze(0).clone().cpu().detach().numpy())
     if isinstance(model, GPT2LMHeadModel):
         embedding_layer = model.transformer.wte
-    elif isinstance(model, BertForMaskedLM):
+    elif isinstance(model, BertForSequenceClassification):
         embedding_layer = model.bert.embeddings.word_embeddings
     handle = embedding_layer.register_forward_hook(forward_hook)
     return handle
@@ -33,7 +33,7 @@ def register_embedding_gradient_hooks(model, embeddings_gradients):
     
     if isinstance(model, GPT2LMHeadModel):
         embedding_layer = model.transformer.wte
-    elif isinstance(model, BertForMaskedLM):
+    elif isinstance(model, BertForSequenceClassification):
         embedding_layer = model.bert.embeddings.word_embeddings
     hook = embedding_layer.register_full_backward_hook(hook_layers)
     return hook
@@ -118,7 +118,7 @@ def merge_bert_tokens(tokens, text, gradients, special_tokens=["[CLS]", "[SEP]",
 
     return np.array(merged_gradients).squeeze()
 
-def lm_saliency(model, tokenizer, input_ids, input_mask, output_ids):
+def lm_saliency(model, tokenizer, input_ids, input_mask, label_id):
 
     torch.enable_grad()
     model.eval()
@@ -129,17 +129,13 @@ def lm_saliency(model, tokenizer, input_ids, input_mask, output_ids):
     # Convert input_ids and attention_mask to PyTorch tensors
     input_ids = torch.tensor(input_ids, dtype=torch.long).to(model.device)
     input_mask = torch.tensor(input_mask, dtype=torch.long).to(model.device)
-    output_ids = torch.tensor(output_ids, dtype=torch.long).to(model.device)
 
     handle = register_embedding_list_hook(model, embeddings_list)
     hook = register_embedding_gradient_hooks(model, gradients_list)
 
-    A = model(input_ids.unsqueeze(0), attention_mask=input_mask.unsqueeze(0))
-    loss = torch.nn.CrossEntropyLoss()(
-        A.logits[:, -len(output_ids):, :].view(-1, A.logits.size(-1)), output_ids)
-
     model.zero_grad()
-    loss.backward()
+    A = model(input_ids.unsqueeze(0), attention_mask=input_mask.unsqueeze(0))
+    A.logits[0][label_id].backward()
 
     handle.remove()
     hook.remove()
@@ -156,11 +152,13 @@ def input_x_gradient(tokens, input_text, grads, embds, model, normalize=False):
 
     if isinstance(model, GPT2LMHeadModel):
         input_grad = merge_gpt_tokens(tokens, input_grad)
-    elif isinstance(model, BertForMaskedLM):
+    elif isinstance(model, BertForSequenceClassification):
         input_grad = merge_bert_tokens(tokens, input_text, input_grad)
     if normalize:
-        # softmax
-        input_grad = np.exp(input_grad) / np.sum(np.exp(input_grad))
+        norm = np.linalg.norm(input_grad, ord=1)
+        input_grad /= norm
+        
+    return input_grad
   
     return input_grad
 
@@ -169,7 +167,7 @@ def l1_grad_norm(tokens, input_text, grads, model, normalize=False):
         
     if isinstance(model, GPT2LMHeadModel):
         l1_grad = merge_gpt_tokens(tokens, l1_grad)
-    elif isinstance(model, BertForMaskedLM):
+    elif isinstance(model, BertForSequenceClassification):
         l1_grad = merge_bert_tokens(tokens, input_text, l1_grad)
     
     if normalize:
@@ -183,7 +181,7 @@ def l2_grad_norm(tokens, input_text, grads, model, normalize=False):
 
     if isinstance(model, GPT2LMHeadModel):
         l2_grad = merge_gpt_tokens(tokens, l2_grad)
-    elif isinstance(model, BertForMaskedLM):
+    elif isinstance(model, BertForSequenceClassification):
         l2_grad = merge_bert_tokens(tokens, input_text, l2_grad)
     
     if normalize:
