@@ -140,7 +140,8 @@ def main():
         "bert": "bert-base-uncased", 
         "roberta": "roberta-base", 
         "gpt2": "gpt2", 
-        "deberta": "microsoft/deberta-v3-base"
+        "deberta": "microsoft/deberta-base",
+        "distilbert": "distilbert-base-uncased"
     }
     if model_name in model_dict:
         model = AutoModelForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=3)

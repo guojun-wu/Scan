@@ -12,6 +12,7 @@ from transformers import (
     BertForSequenceClassification,
     RobertaForSequenceClassification,
     AutoTokenizer,
+    DistilBertForSequenceClassification
 )
 
 plt.rcParams['figure.figsize'] = [10, 10]
@@ -26,6 +27,8 @@ def register_embedding_list_hook(model, embeddings_list):
         embedding_layer = model.bert.embeddings.word_embeddings
     elif isinstance(model, RobertaForSequenceClassification):
         embedding_layer = model.roberta.embeddings.word_embeddings
+    elif isinstance(model, DistilBertForSequenceClassification):
+        embedding_layer = model.distilbert.embeddings.word_embeddings
     handle = embedding_layer.register_forward_hook(forward_hook)
     return handle
 
@@ -39,6 +42,8 @@ def register_embedding_gradient_hooks(model, embeddings_gradients):
         embedding_layer = model.bert.embeddings.word_embeddings
     elif isinstance(model, RobertaForSequenceClassification):
         embedding_layer = model.roberta.embeddings.word_embeddings
+    elif isinstance(model, DistilBertForSequenceClassification):
+        embedding_layer = model.distilbert.embeddings.word_embeddings
     hook = embedding_layer.register_full_backward_hook(hook_layers)
     return hook
 
@@ -154,7 +159,7 @@ def lm_saliency(model, tokenizer, input_ids, input_mask, label_id):
 def input_x_gradient(tokens, input_text, grads, embds, model, normalize=False):
     input_grad = np.sum(grads * embds, axis=-1).squeeze()
 
-    if isinstance(model, BertForSequenceClassification):
+    if isinstance(model, BertForSequenceClassification) or isinstance(model, DistilBertForSequenceClassification):
         input_grad = merge_bert_tokens(tokens, input_text, input_grad)
     else:
         input_grad = merge_gpt_tokens(tokens, input_grad)
@@ -169,7 +174,7 @@ def input_x_gradient(tokens, input_text, grads, embds, model, normalize=False):
 def l1_grad_norm(tokens, input_text, grads, model, normalize=False):
     l1_grad = np.linalg.norm(grads, ord=1, axis=-1).squeeze()
         
-    if isinstance(model, BertForSequenceClassification):
+    if isinstance(model, BertForSequenceClassification) or isinstance(model, DistilBertForSequenceClassification):
         l1_grad = merge_bert_tokens(tokens, input_text, l1_grad)
     else:
         l1_grad = merge_gpt_tokens(tokens, l1_grad)
@@ -183,7 +188,7 @@ def l1_grad_norm(tokens, input_text, grads, model, normalize=False):
 def l2_grad_norm(tokens, input_text, grads, model, normalize=False):
     l2_grad = np.linalg.norm(grads, ord=2, axis=-1).squeeze()
 
-    if isinstance(model, BertForSequenceClassification):
+    if isinstance(model, BertForSequenceClassification) or isinstance(model, DistilBertForSequenceClassification):
         l2_grad = merge_bert_tokens(tokens, input_text, l2_grad)
     else:
         l2_grad = merge_gpt_tokens(tokens, l2_grad)

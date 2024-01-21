@@ -9,7 +9,9 @@ def load_model(model_name="gpt2", tuned=False):
         "bert": "bert-base-uncased", 
         "roberta": "roberta-base", 
         "gpt2": "gpt2", 
-        "deberta": "microsoft/deberta-v3-base"
+        "deberta": "microsoft/deberta-v3-base",
+        "distilbert": "distilbert-base-uncased"
+
     }
     if model_name == "gpt2":
         tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
@@ -29,6 +31,12 @@ def load_model(model_name="gpt2", tuned=False):
             model = RobertaForSequenceClassification.from_pretrained('checkpoints/sst_roberta', num_labels=3)
         else:
             model = RobertaForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=3)
+    elif model_name == "distilbert":
+        tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
+        if tuned:
+            model = DistilBertForSequenceClassification.from_pretrained('checkpoints/sst_distilbert', num_labels=3)
+        else:
+            model = DistilBertForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=3)
     else:
         raise ValueError("Invalid model name")
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
