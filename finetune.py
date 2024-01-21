@@ -1,5 +1,9 @@
 import torch
-from transformers import BertForSequenceClassification, BertTokenizer
+from transformers import ( 
+    AutoModelForSequenceClassification,
+    AutoTokenizer, 
+    GPT2Tokenizer,
+)
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset
 from torch.nn.utils.rnn import pad_sequence
@@ -7,6 +11,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 import pandas as pd
+import numpy as np
+import argparse
 
 class CustomDataset(Dataset):
     def __init__(self, texts, labels, tokenizer, max_length):
@@ -44,12 +50,8 @@ def load_data():
 
     return train_texts, val_texts, train_labels, val_labels
 
-def train():
+def train(model_name, model, tokenizer):
     train_texts, val_texts, train_labels, val_labels = load_data()
-
-    model_name = 'bert-base-uncased'
-    model = BertForSequenceClassification.from_pretrained(model_name, num_labels=3)
-    tokenizer = BertTokenizer.from_pretrained(model_name)
 
     train_dataset = CustomDataset(train_texts, train_labels, tokenizer, max_length=128)
     val_dataset = CustomDataset(val_texts, val_labels, tokenizer, max_length=128)
@@ -127,10 +129,31 @@ def train():
         scheduler.step()
 
     # Save the fine-tuned model
-    model.save_pretrained("checkpoints/sst_bert")
+    model.save_pretrained(f"checkpoints/sst_{model_name}")
 
 def main():
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m','--model_name', type=str, default='bert')
+    args = parser.parse_args()
+    model_name = args.model_name
+    model_dict = {
+        "bert": "bert-base-uncased", 
+        "roberta": "roberta-base", 
+        "gpt2": "gpt2", 
+        "deberta": "microsoft/deberta-v3-base"
+    }
+    if model_name in model_dict:
+        model = AutoModelForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=3)
+        tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
+        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        model.resize_token_embeddings(len(tokenizer))
+        padding_token_id = tokenizer.convert_tokens_to_ids('[PAD]')
+        model.config.pad_token_id = padding_token_id
+        tokenizer.pad_token_id = padding_token_id
+    else:
+        raise ValueError("Invalid model name")
+    train(model_name, model, tokenizer)
+    
 
 if __name__ == '__main__':
     main()

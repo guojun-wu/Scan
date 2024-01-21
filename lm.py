@@ -5,20 +5,30 @@ from saliency import *
 from tqdm import tqdm
 
 def load_model(model_name="gpt2", tuned=False):
+    model_dict = {
+        "bert": "bert-base-uncased", 
+        "roberta": "roberta-base", 
+        "gpt2": "gpt2", 
+        "deberta": "microsoft/deberta-v3-base"
+    }
     if model_name == "gpt2":
-        tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+        tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
         if tuned:
-            # random init
-            config = GPT2Config()
-            model = GPT2LMHeadModel(config)
+            model = GPT2ForSequenceClassification.from_pretrained('checkpoints/sst_gpt2', num_labels=3)
         else:
-            model = GPT2LMHeadModel.from_pretrained(model_name)
+            model = GPT2ForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=3)
     elif model_name == "bert":
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         if tuned:
             model = BertForSequenceClassification.from_pretrained('checkpoints/sst_bert', num_labels=3)
         else:
             model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)
+    elif model_name == "roberta":
+        tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
+        if tuned:
+            model = RobertaForSequenceClassification.from_pretrained('checkpoints/sst_roberta', num_labels=3)
+        else:
+            model = RobertaForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=3)
     else:
         raise ValueError("Invalid model name")
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")

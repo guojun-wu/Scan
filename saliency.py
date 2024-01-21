@@ -6,12 +6,12 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from transformers import (
-     GPT2Tokenizer, 
-     GPT2LMHeadModel,
-     GPT2Config,
-     BertTokenizer,
-     BertForSequenceClassification,
-        BertConfig,
+    GPT2Tokenizer, 
+    GPT2ForSequenceClassification ,
+    BertTokenizer,
+    BertForSequenceClassification,
+    RobertaForSequenceClassification,
+    AutoTokenizer,
 )
 
 plt.rcParams['figure.figsize'] = [10, 10]
@@ -20,10 +20,12 @@ plt.rcParams['figure.figsize'] = [10, 10]
 def register_embedding_list_hook(model, embeddings_list):
     def forward_hook(module, inputs, output):
         embeddings_list.append(output.squeeze(0).clone().cpu().detach().numpy())
-    if isinstance(model, GPT2LMHeadModel):
+    if isinstance(model, GPT2ForSequenceClassification):
         embedding_layer = model.transformer.wte
     elif isinstance(model, BertForSequenceClassification):
         embedding_layer = model.bert.embeddings.word_embeddings
+    elif isinstance(model, RobertaForSequenceClassification):
+        embedding_layer = model.roberta.embeddings.word_embeddings
     handle = embedding_layer.register_forward_hook(forward_hook)
     return handle
 
@@ -31,10 +33,12 @@ def register_embedding_gradient_hooks(model, embeddings_gradients):
     def hook_layers(module, grad_in, grad_out):
         embeddings_gradients.append(grad_out[0].detach().cpu().numpy())
     
-    if isinstance(model, GPT2LMHeadModel):
+    if isinstance(model, GPT2ForSequenceClassification):
         embedding_layer = model.transformer.wte
     elif isinstance(model, BertForSequenceClassification):
         embedding_layer = model.bert.embeddings.word_embeddings
+    elif isinstance(model, RobertaForSequenceClassification):
+        embedding_layer = model.roberta.embeddings.word_embeddings
     hook = embedding_layer.register_full_backward_hook(hook_layers)
     return hook
 
@@ -150,10 +154,10 @@ def lm_saliency(model, tokenizer, input_ids, input_mask, label_id):
 def input_x_gradient(tokens, input_text, grads, embds, model, normalize=False):
     input_grad = np.sum(grads * embds, axis=-1).squeeze()
 
-    if isinstance(model, GPT2LMHeadModel):
-        input_grad = merge_gpt_tokens(tokens, input_grad)
-    elif isinstance(model, BertForSequenceClassification):
+    if isinstance(model, BertForSequenceClassification):
         input_grad = merge_bert_tokens(tokens, input_text, input_grad)
+    else:
+        input_grad = merge_gpt_tokens(tokens, input_grad)
     if normalize:
         norm = np.linalg.norm(input_grad, ord=1)
         input_grad /= norm
@@ -165,10 +169,10 @@ def input_x_gradient(tokens, input_text, grads, embds, model, normalize=False):
 def l1_grad_norm(tokens, input_text, grads, model, normalize=False):
     l1_grad = np.linalg.norm(grads, ord=1, axis=-1).squeeze()
         
-    if isinstance(model, GPT2LMHeadModel):
-        l1_grad = merge_gpt_tokens(tokens, l1_grad)
-    elif isinstance(model, BertForSequenceClassification):
+    if isinstance(model, BertForSequenceClassification):
         l1_grad = merge_bert_tokens(tokens, input_text, l1_grad)
+    else:
+        l1_grad = merge_gpt_tokens(tokens, l1_grad)
     
     if normalize:
         norm = np.linalg.norm(l1_grad, ord=1)
@@ -179,10 +183,10 @@ def l1_grad_norm(tokens, input_text, grads, model, normalize=False):
 def l2_grad_norm(tokens, input_text, grads, model, normalize=False):
     l2_grad = np.linalg.norm(grads, ord=2, axis=-1).squeeze()
 
-    if isinstance(model, GPT2LMHeadModel):
-        l2_grad = merge_gpt_tokens(tokens, l2_grad)
-    elif isinstance(model, BertForSequenceClassification):
+    if isinstance(model, BertForSequenceClassification):
         l2_grad = merge_bert_tokens(tokens, input_text, l2_grad)
+    else:
+        l2_grad = merge_gpt_tokens(tokens, l2_grad)
     
     if normalize:
         norm = np.linalg.norm(l2_grad, ord=1)
