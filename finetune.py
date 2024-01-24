@@ -15,13 +15,19 @@ import numpy as np
 import argparse
 
 class CustomDataset(Dataset):
-    def __init__(self, texts, labels, tokenizer, max_length):
+    def __init__(self, texts, labels, tokenizer, max_length, task):
         self.texts = texts
         self.labels = labels
         self.tokenizer = tokenizer
         self.max_length = max_length
-        self.label_mapping = {0: 0, 2: 1, 4: 2}
-
+        if task == 'sst':
+            self.label_mapping = {0: 0, 2: 1, 4: 2}
+        elif task == 'wiki':
+            self.label_mapping = {'award': 0, 'education':1, 'employer':2, 'founder':3, 
+                        'job_title':4, 'nationality':5, 'political_affiliation':6, 'visited':7, 'wife':8}
+        else:
+            raise ValueError("Invalid task")
+        
     def __len__(self):
         return len(self.texts)
 
@@ -40,9 +46,9 @@ class CustomDataset(Dataset):
 
         return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
 
-def load_data():
-    train_df = pd.read_csv("data/sst/train.csv", sep=",")
-    val_df = pd.read_csv("data/sst/val.csv", sep=",")
+def load_data(task):
+    train_df = pd.read_csv(f"data/{task}/train.csv", sep=",")
+    val_df = pd.read_csv(f"data/{task}/val.csv", sep=",")
     train_texts = train_df["text"].tolist()
     train_labels = train_df["label"].tolist()
     val_texts = val_df["text"].tolist()
@@ -50,11 +56,11 @@ def load_data():
 
     return train_texts, val_texts, train_labels, val_labels
 
-def train(model_name, model, tokenizer):
-    train_texts, val_texts, train_labels, val_labels = load_data()
+def train(model_name, model, tokenizer, task):
+    train_texts, val_texts, train_labels, val_labels = load_data(task)
 
-    train_dataset = CustomDataset(train_texts, train_labels, tokenizer, max_length=128)
-    val_dataset = CustomDataset(val_texts, val_labels, tokenizer, max_length=128)
+    train_dataset = CustomDataset(train_texts, train_labels, tokenizer, max_length=128, task=task)
+    val_dataset = CustomDataset(val_texts, val_labels, tokenizer, max_length=128, task=task)
 
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, collate_fn=train_dataset.collate_fn)
     val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False, collate_fn=val_dataset.collate_fn)
@@ -63,7 +69,7 @@ def train(model_name, model, tokenizer):
     model.to(device)
 
     optimizer = AdamW(model.parameters(), lr=2e-5, betas=(0.9, 0.999), eps=1e-08)
-    num_epochs = 100
+    num_epochs = 10
     total_steps = len(train_loader) * num_epochs
 
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.9)
@@ -129,13 +135,15 @@ def train(model_name, model, tokenizer):
         scheduler.step()
 
     # Save the fine-tuned model
-    model.save_pretrained(f"checkpoints/sst_{model_name}")
+    model.save_pretrained(f"checkpoints/{task}_{model_name}")
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m','--model_name', type=str, default='bert')
+    parser.add_argument('-t','--task', type=str, default='sst')
     args = parser.parse_args()
     model_name = args.model_name
+    task = args.task
     model_dict = {
         "bert": "bert-base-uncased", 
         "roberta": "roberta-base", 
@@ -143,8 +151,12 @@ def main():
         "deberta": "microsoft/deberta-base",
         "distilbert": "distilbert-base-uncased"
     }
+    if task == 'sst':
+        num_labels = 3
+    elif task == 'wiki':
+        num_labels = 9
     if model_name in model_dict:
-        model = AutoModelForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=3)
+        model = AutoModelForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=num_labels)
         tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
         tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         model.resize_token_embeddings(len(tokenizer))
@@ -153,7 +165,7 @@ def main():
         tokenizer.pad_token_id = padding_token_id
     else:
         raise ValueError("Invalid model name")
-    train(model_name, model, tokenizer)
+    train(model_name, model, tokenizer, task)
     
 
 if __name__ == '__main__':

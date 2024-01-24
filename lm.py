@@ -4,7 +4,9 @@ import os
 from saliency import *
 from tqdm import tqdm
 
-def load_model(model_name="gpt2", tuned=False):
+def load_model(model_name="gpt2", tuned=False, task="zuco11"):
+    task_dict = {"zuco11": "sst", "zuco13": "wiki"}
+    num_dict = {"zuco11": 3, "zuco13": 9}
     model_dict = {
         "bert": "bert-base-uncased", 
         "roberta": "roberta-base", 
@@ -14,31 +16,31 @@ def load_model(model_name="gpt2", tuned=False):
     if model_name == "gpt2":
         tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
         if tuned:
-            model = GPT2ForSequenceClassification.from_pretrained('checkpoints/sst_gpt2', num_labels=3)
+            model = GPT2ForSequenceClassification.from_pretrained(f'checkpoints/{task_dict[task]}_gpt2', num_labels=num_dict[task])
         else:
             # load random init model
-            model = GPT2ForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=3)
+            model = GPT2ForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=num_dict[task])
             model.init_weights()
     elif model_name == "bert":
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         if tuned:
-            model = BertForSequenceClassification.from_pretrained('checkpoints/sst_bert', num_labels=3)
+            model = BertForSequenceClassification.from_pretrained(f'checkpoints/{task_dict[task]}_bert', num_labels=num_dict[task])
         else:
-            model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)
+            model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_dict[task])
             model.init_weights()
     elif model_name == "roberta":
         tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
         if tuned:
-            model = RobertaForSequenceClassification.from_pretrained('checkpoints/sst_roberta', num_labels=3)
+            model = RobertaForSequenceClassification.from_pretrained(f'checkpoints/{task_dict[task]}_roberta', num_labels=num_dict[task])
         else:
-            model = RobertaForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=3)
+            model = RobertaForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=num_dict[task])
             
     elif model_name == "distilbert":
         tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
         if tuned:
-            model = DistilBertForSequenceClassification.from_pretrained('checkpoints/sst_distilbert', num_labels=3)
+            model = DistilBertForSequenceClassification.from_pretrained(f'checkpoints/{task_dict[task]}_distilbert', num_labels=num_dict[task])
         else:
-            model = DistilBertForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=3)
+            model = DistilBertForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=num_dict[task])
     else:
         raise ValueError("Invalid model name")
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -48,13 +50,20 @@ def load_model(model_name="gpt2", tuned=False):
 def load_data(task):
     if task == "zuco11":
         test_df = pd.read_csv("data/sst/test.csv", sep=",")
+    elif task == "zuco13":
+        test_df = pd.read_csv("data/wiki/test_filtered.csv", sep=",")
     else:
         raise ValueError("Invalid task name")
 
     return test_df
 
-def seq_saliency(text, label, tokenizer, model):
-    label_mapping = {0: 0, 2: 1, 4: 2}
+def seq_saliency(text, label, tokenizer, model, task):
+    if task == "zuco11":
+        label_mapping = {0: 0, 2: 1, 4: 2}
+    elif task == "zuco13":
+        label_mapping = {'award': 0, 'education':1, 'employer':2, 'founder':3, 
+                        'job_title':4, 'nationality':5, 'political_affiliation':6, 'visited':7, 'wife':8}
+
     label_id = label_mapping[label]
     
     input_text = text.strip()
@@ -77,16 +86,17 @@ def main():
     args = parser.parse_args()
     model_name = args.model_name
     tuned = args.tuned
+    task = args.task
     
-    tokenizer, model = load_model(model_name, tuned=tuned)
+    tokenizer, model = load_model(model_name, tuned=tuned, task=task)
     num_labels = model.config.num_labels    
 
-    data = load_data(args.task)
-    task_dict = {"zuco11": "task1", "zuco12": "task2"}
+    data = load_data(task)
+    task_dict = {"zuco11": "task1", "zuco13": "task3"}
     df_saliency = pd.DataFrame(columns=["sid", "x_grad", "l1_grad", "l2_grad"])
     
     for i in tqdm(range(len(data))):
-        x_grad, l1_grad, l2_grad = seq_saliency(data.iloc[i]["text"], data.iloc[i]["label"], tokenizer, model)
+        x_grad, l1_grad, l2_grad = seq_saliency(data.iloc[i]["text"], data.iloc[i]["label"], tokenizer, model, task)
         new_row = pd.DataFrame({
             "sid": [data.iloc[i]["sid"]],
             "x_grad": [x_grad.tolist()],
@@ -95,9 +105,9 @@ def main():
         })
         df_saliency = pd.concat([df_saliency, new_row], ignore_index=True)
     if tuned:
-        output_path = f"data/zuco/{task_dict[args.task]}/{model_name}_saliency.csv"
+        output_path = f"data/zuco/{task_dict[task]}/{model_name}_saliency.csv"
     else:
-        output_path = f"data/zuco/{task_dict[args.task]}/{model_name}_control_saliency.csv"
+        output_path = f"data/zuco/{task_dict[task]}/{model_name}_control_saliency.csv"
 
     df_saliency.to_csv(output_path, index=False)
 
