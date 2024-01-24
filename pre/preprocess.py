@@ -99,6 +99,7 @@ def ZUCO_read_scanpath(directory, task):
     for file in tqdm(sorted(os.listdir(directory))):
         if not file.endswith('.mat'):
             continue
+        print(file)
         subj = file.split('_')[0][-3:]
         fpath = os.path.join(directory, file)
         # read scanpath
@@ -325,22 +326,22 @@ def main() -> int:
         type=str,
         choices=[
             # zuco 1
-            'zuco11', 'zuco12',
+            'zuco11', 'zuco12', 'zuco13',
             # zuco 2
             'zuco21',
         ],
     )
     args = parser.parse_args()
-    print(f'Preparing word info for {args.zuco_task}...')
+    # print(f'Preparing word info info for {args.zuco_task}...')
     path_to_zuco = "data/"
     # create word information for all the sentences in each task, save to csv file in the same task folder
     # ZUCO_read_words(directory=path_to_zuco, task=args.zuco_task)
-    # print(f'Preparing scanpath info for {args.zuco_task}...')
-    # # create scanpath information for all subjects in each task, save to csv file in the same folder
-    # ZUCO_read_scanpath(  # 12 subject
-    #     directory=path_to_zuco,
-    #     task=args.zuco_task,
-    # )
+    print(f'Preparing scanpath info for {args.zuco_task}...')
+    # create scanpath information for all subjects in each task, save to csv file in the same folder
+    ZUCO_read_scanpath(  # 12 subject
+        directory=path_to_zuco,
+        task=args.zuco_task,
+    )
     print(f'Preparing sentence content for {args.zuco_task}...')
     read_sentence_content(directory=path_to_zuco, task=args.zuco_task)
     # print(f'Preparing scanpath content for {args.zuco_task}...')

@@ -24,19 +24,9 @@ def extract_fixation_data(path):
             df_dur = pd.concat([df_dur, pd.DataFrame({'id': subject, 'sn': sentence, 'list_dur': [list_dur.tolist()]})], ignore_index=True)
     df_dur.to_csv("data/zuco/task1/fixation.csv", index=False)
 
-def average_fixation_data(path):
-    # average the fixation data of all the subjects
-    df = pd.read_csv(path, sep=',')
-    df_avg = pd.DataFrame(columns=['sn', 'list_dur'])
-    sentences = df['sn'].unique()
-    for sentence in sentences:
-        df_sentence = df[df['sn'] == sentence]
-        df_tmp = df_sentence['list_dur'].apply(ast.literal_eval)
-        avg_dur = np.mean(df_tmp.values.tolist(), axis=0)
-        df_avg = pd.concat([df_avg, pd.DataFrame({'sn': sentence, 'list_dur': [avg_dur.tolist()]})], ignore_index=True)
-    df_avg.to_csv("data/zuco/task2/fixation_avg.csv", index=False)
                 
 def main():
+
     path = "data/zuco/task1/Matlab_files/scanpath.csv"
     extract_fixation_data(path)
     

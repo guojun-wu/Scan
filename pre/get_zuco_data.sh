@@ -11,8 +11,8 @@ pip install osfclient
 
 for zuco_data in q3zws # 2urht  # optional to also get zuco2
 do
-    # if [ "$zuco_data" == "2urht" ];   # optional to also get zuco2then  
-        for task in task1-\ SR task2\ -\ NR
+    # if [ "$zuco_data" == "2urht" ];   # optional to also get zuco2then  task1-\ SR task2\ -\ NR 
+        for task in task3\ -\ TSR
         do
             mkdir -p data/zuco/${task:0:5}
             for subj in ZAB ZDM ZDN ZGW ZJM ZJN ZJS ZKB ZKH ZKW ZMG ZPH
