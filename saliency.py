@@ -12,7 +12,8 @@ from transformers import (
     BertForSequenceClassification,
     RobertaForSequenceClassification,
     AutoTokenizer,
-    DistilBertForSequenceClassification
+    DistilBertForSequenceClassification,
+    OPTForSequenceClassification,
 )
 
 plt.rcParams['figure.figsize'] = [10, 10]
@@ -21,6 +22,7 @@ plt.rcParams['figure.figsize'] = [10, 10]
 def register_embedding_list_hook(model, embeddings_list):
     def forward_hook(module, inputs, output):
         embeddings_list.append(output.squeeze(0).clone().cpu().detach().numpy())
+    # Define a dictionary mapping model classes to their embedding layer attributes
     if isinstance(model, GPT2ForSequenceClassification):
         embedding_layer = model.transformer.wte
     elif isinstance(model, BertForSequenceClassification):
@@ -29,6 +31,9 @@ def register_embedding_list_hook(model, embeddings_list):
         embedding_layer = model.roberta.embeddings.word_embeddings
     elif isinstance(model, DistilBertForSequenceClassification):
         embedding_layer = model.distilbert.embeddings.word_embeddings
+    elif isinstance(model, OPTForSequenceClassification):
+        embedding_layer = model.base_model.embeddings.word_embeddings
+
     handle = embedding_layer.register_forward_hook(forward_hook)
     return handle
 
@@ -39,11 +44,13 @@ def register_embedding_gradient_hooks(model, embeddings_gradients):
     if isinstance(model, GPT2ForSequenceClassification):
         embedding_layer = model.transformer.wte
     elif isinstance(model, BertForSequenceClassification):
-        embedding_layer = model.bert.embeddings.word_embeddings
+        embedding_layer = model.get_input_embeddings()
     elif isinstance(model, RobertaForSequenceClassification):
         embedding_layer = model.roberta.embeddings.word_embeddings
     elif isinstance(model, DistilBertForSequenceClassification):
         embedding_layer = model.distilbert.embeddings.word_embeddings
+    elif isinstance(model, OPTForSequenceClassification):
+        embedding_layer = model.get_input_embeddings()
     hook = embedding_layer.register_full_backward_hook(hook_layers)
     return hook
 

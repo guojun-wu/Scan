@@ -115,8 +115,6 @@ def train(model_name, model, tokenizer, task):
 
                 all_val_preds.extend(val_preds)
                 all_val_labels.extend(val_labels)
-        print(all_val_preds[:50])
-        print(all_val_labels[:50])
         val_accuracy = accuracy_score(all_val_labels, all_val_preds)
         print(f'Validation Accuracy: {val_accuracy}')
 
@@ -149,7 +147,6 @@ def main():
         "roberta": "roberta-base", 
         "gpt2": "gpt2", 
         "opt": "facebook/opt-350m",
-        "distilgpt2": "distilgpt2"
     }
     if task == 'sst':
         num_labels = 3

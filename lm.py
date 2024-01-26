@@ -8,44 +8,28 @@ def load_model(model_name="gpt2", tuned=False, task="zuco11"):
     task_dict = {"zuco11": "sst", "zuco13": "wiki"}
     num_dict = {"zuco11": 3, "zuco13": 9}
     model_dict = {
+        "bert": BertForSequenceClassification, 
+        "roberta": RobertaForSequenceClassification, 
+        "gpt2": GPT2ForSequenceClassification, 
+        "distilbert": DistilBertForSequenceClassification,
+        "opt": OPTForSequenceClassification}
+    path_dict = {
         "bert": "bert-base-uncased", 
         "roberta": "roberta-base", 
         "gpt2": "gpt2", 
         "distilbert": "distilbert-base-uncased",
-        "opt": "facebook/opt-350m",
-        "distilgpt2": "distilgpt2"
-    }
-    if model_name == "gpt2":
-        tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
-        if tuned:
-            model = GPT2ForSequenceClassification.from_pretrained(f'checkpoints/{task_dict[task]}_gpt2', num_labels=num_dict[task])
-        else:
-            # load random init model
-            model = GPT2ForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=num_dict[task])
-            model.init_weights()
-    elif model_name == "bert":
-        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-        if tuned:
-            model = BertForSequenceClassification.from_pretrained(f'checkpoints/{task_dict[task]}_bert', num_labels=num_dict[task])
-        else:
-            model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_dict[task])
-            model.init_weights()
-    elif model_name == "roberta":
-        tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
-        if tuned:
-            model = RobertaForSequenceClassification.from_pretrained(f'checkpoints/{task_dict[task]}_roberta', num_labels=num_dict[task])
-        else:
-            model = RobertaForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=num_dict[task])
-            
-    elif model_name == "distilbert":
-        tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
-        if tuned:
-            model = DistilBertForSequenceClassification.from_pretrained(f'checkpoints/{task_dict[task]}_distilbert', num_labels=num_dict[task])
-        else:
-            model = DistilBertForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=num_dict[task])
+        "opt": "facebook/opt-350m",}
+
+    # Load tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(path_dict[model_name])
+
+    # Load model based on model_name
+    if tuned:
+        model = model_dict[model_name].from_pretrained(f'checkpoints/{task_dict[task]}_{model_name}', num_labels=num_dict[task])
     else:
-        raise ValueError("Invalid model name")
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        model = model_dict[model_name].from_pretrained(path_dict[model_name], num_labels=num_dict[task])
+        
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     return tokenizer, model
 
