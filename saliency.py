@@ -32,7 +32,7 @@ def register_embedding_list_hook(model, embeddings_list):
     elif isinstance(model, DistilBertForSequenceClassification):
         embedding_layer = model.distilbert.embeddings.word_embeddings
     elif isinstance(model, OPTForSequenceClassification):
-        embedding_layer = model.base_model.embeddings.word_embeddings
+        embedding_layer = model.get_input_embeddings()
 
     handle = embedding_layer.register_forward_hook(forward_hook)
     return handle
