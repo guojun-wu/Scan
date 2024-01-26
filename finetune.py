@@ -65,7 +65,7 @@ def train(model_name, model, tokenizer, task):
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, collate_fn=train_dataset.collate_fn)
     val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False, collate_fn=val_dataset.collate_fn)
 
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
     optimizer = AdamW(model.parameters(), lr=2e-5, betas=(0.9, 0.999), eps=1e-08)
@@ -145,11 +145,12 @@ def main():
     model_name = args.model_name
     task = args.task
     model_dict = {
+        "distilbert": "distilbert-base-uncased",
         "bert": "bert-base-uncased", 
         "roberta": "roberta-base", 
         "gpt2": "gpt2", 
-        "deberta": "microsoft/deberta-base",
-        "distilbert": "distilbert-base-uncased"
+        "opt": "facebook/opt-350m",
+        "distilgpt2": "distilgpt2"
     }
     if task == 'sst':
         num_labels = 3
@@ -158,11 +159,11 @@ def main():
     if model_name in model_dict:
         model = AutoModelForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=num_labels)
         tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
-        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        model.resize_token_embeddings(len(tokenizer))
-        padding_token_id = tokenizer.convert_tokens_to_ids('[PAD]')
-        model.config.pad_token_id = padding_token_id
-        tokenizer.pad_token_id = padding_token_id
+        # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        # model.resize_token_embeddings(len(tokenizer))
+        # padding_token_id = tokenizer.convert_tokens_to_ids('[PAD]')
+        # model.config.pad_token_id = padding_token_id
+        # tokenizer.pad_token_id = padding_token_id
     else:
         raise ValueError("Invalid model name")
     train(model_name, model, tokenizer, task)

@@ -21,6 +21,7 @@ def average_fixation(path):
     
 def compute_spearman(df):
     # compute spearman correlation between fixation and x_explanation
+    print(len(df))
     fixation = df['list_dur']
     x_explanation = df['x_grad'].apply(ast.literal_eval)
     l1_explanation = df['l1_grad'].apply(ast.literal_eval)
@@ -75,7 +76,7 @@ def main():
     parser.add_argument('--tuned', action='store_true', help='finetuned model')
     args = parser.parse_args()
 
-    task_dict = {"zuco11": "task1", "zuco12": "task2"}
+    task_dict = {"zuco11": "task1", "zuco13": "task3"}
     base_path = "data/zuco/" + task_dict[args.task]
 
     model_name = args.model_name
@@ -89,7 +90,7 @@ def main():
         
     df_fixation = average_fixation(fixation_path)
     df_saliency = pd.read_csv(saliency_path, sep=',')
-    df = pd.merge(df_fixation, df_saliency, on='sid')
+    df = pd.merge(df_fixation, df_saliency, on='sid', how='inner')
     # compute spearman correlation between fixation and saliency
     compute_spearman(df)
     
