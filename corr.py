@@ -23,27 +23,27 @@ def compute_spearman(df):
     # compute spearman correlation between fixation and x_explanation
     print(len(df))
     fixation = df['list_dur']
-    x_explanation = df['x_grad'].apply(ast.literal_eval)
+    # x_explanation = df['x_grad'].apply(ast.literal_eval)
     l1_explanation = df['l1_grad'].apply(ast.literal_eval)
-    l2_explanation = df['l2_grad'].apply(ast.literal_eval)
+    # l2_explanation = df['l2_grad'].apply(ast.literal_eval)
 
-    spearman_x = []
+    # spearman_x = []
     spearman_l1 = []
-    spearman_l2 = []
+    # spearman_l2 = []
     
     for i in range(len(fixation)):
         if len(fixation[i]) != len(l1_explanation[i]):
             print("Error: length of fixation and explanation does not match")
             break
-        spearman_x.append(scipy.stats.spearmanr(fixation[i], x_explanation[i])[0])
+        # spearman_x.append(scipy.stats.spearmanr(fixation[i], x_explanation[i])[0])
         spearman_l1.append(scipy.stats.spearmanr(fixation[i], l1_explanation[i])[0])
-        spearman_l2.append(scipy.stats.spearmanr(fixation[i], l2_explanation[i])[0])
-    print("x_explanation")
-    print(np.mean(spearman_x))
+        # spearman_l2.append(scipy.stats.spearmanr(fixation[i], l2_explanation[i])[0])
+    # print("x_explanation")
+    # print(np.mean(spearman_x))
     print("l1_explanation")
     print(np.mean(spearman_l1))
-    print("l2_explanation")
-    print(np.mean(spearman_l2))
+    # print("l2_explanation")
+    # print(np.mean(spearman_l2))
 
     
     # concat the vectors in fixation 
@@ -71,13 +71,14 @@ def compute_spearman(df):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t','--task', type=str, default='zuco12')
+    parser.add_argument('-t','--task', type=str, default='sst')
     parser.add_argument('-m','--model_name', type=str, default='gpt2')
     parser.add_argument('--tuned', action='store_true', help='finetuned model')
     args = parser.parse_args()
 
-    task_dict = {"zuco11": "task1", "zuco13": "task3"}
-    base_path = "data/zuco/" + task_dict[args.task]
+    task = args.task
+    
+    base_path = "data/" + task
 
     model_name = args.model_name
     
