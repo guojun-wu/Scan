@@ -51,7 +51,7 @@ def load_data(task):
     if task == "zuco11":
         test_df = pd.read_csv("data/sst/test.csv", sep=",")
     elif task == "zuco13":
-        test_df = pd.read_csv("data/wiki/test_filtered.csv", sep=",")
+        test_df = pd.read_csv("data/wiki/test_.csv", sep=",")
     else:
         raise ValueError("Invalid task name")
 
