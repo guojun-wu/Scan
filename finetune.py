@@ -7,8 +7,6 @@ from transformers import (
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset
 from torch.nn.utils.rnn import pad_sequence
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 import pandas as pd
 import numpy as np

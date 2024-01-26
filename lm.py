@@ -11,7 +11,9 @@ def load_model(model_name="gpt2", tuned=False, task="zuco11"):
         "bert": "bert-base-uncased", 
         "roberta": "roberta-base", 
         "gpt2": "gpt2", 
-        "distilbert": "distilbert-base-uncased"
+        "distilbert": "distilbert-base-uncased",
+        "opt": "facebook/opt-350m",
+        "distilgpt2": "distilgpt2"
     }
     if model_name == "gpt2":
         tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
@@ -51,7 +53,7 @@ def load_data(task):
     if task == "zuco11":
         test_df = pd.read_csv("data/sst/test.csv", sep=",")
     elif task == "zuco13":
-        test_df = pd.read_csv("data/wiki/test_.csv", sep=",")
+        test_df = pd.read_csv("data/wiki/test.csv", sep=",")
     else:
         raise ValueError("Invalid task name")
 
