@@ -8,14 +8,18 @@ def load_model(model_name="gpt2", tuned=False, task="sst"):
     num_dict = {"sst": 3, "wiki": 9}
     model_dict = {
         "bert": BertForSequenceClassification, 
+        "bert_large": BertForSequenceClassification,
         "roberta": RobertaForSequenceClassification, 
         "gpt2": GPT2ForSequenceClassification, 
+        "gpt2_large": GPT2ForSequenceClassification,
         "distilbert": DistilBertForSequenceClassification,
         "opt": OPTForSequenceClassification}
     path_dict = {
         "bert": "bert-base-uncased", 
+        "bert_large": "bert-large-uncased",
         "roberta": "roberta-base", 
         "gpt2": "gpt2", 
+        "gpt2_large": "gpt2-large",
         "distilbert": "distilbert-base-uncased",
         "opt": "facebook/opt-350m",}
 

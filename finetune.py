@@ -147,6 +147,8 @@ def main():
         "roberta": "roberta-base", 
         "gpt2": "gpt2", 
         "opt": "facebook/opt-350m",
+        "bert_large": "bert-large-uncased",
+        "gpt2_large": "gpt2-large",
     }
     if task == 'sst':
         num_labels = 3
