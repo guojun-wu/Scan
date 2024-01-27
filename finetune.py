@@ -157,13 +157,15 @@ def main():
     if model_name in model_dict:
         model = AutoModelForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=num_labels)
         tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
-        # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        # model.resize_token_embeddings(len(tokenizer))
-        # padding_token_id = tokenizer.convert_tokens_to_ids('[PAD]')
-        # model.config.pad_token_id = padding_token_id
-        # tokenizer.pad_token_id = padding_token_id
+    # if model_name contains 'gpt2', then use GPT2Tokenizer
     else:
         raise ValueError("Invalid model name")
+    if 'gpt2' in model_name:
+        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        model.resize_token_embeddings(len(tokenizer))
+        padding_token_id = tokenizer.convert_tokens_to_ids('[PAD]')
+        model.config.pad_token_id = padding_token_id
+        tokenizer.pad_token_id = padding_token_id
     train(model_name, model, tokenizer, task)
     
 
