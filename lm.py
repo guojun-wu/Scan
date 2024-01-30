@@ -40,7 +40,8 @@ def load_model(model_name="gpt2", tuned=False, task="sst"):
         model = model_dict[model_name].from_pretrained(f'checkpoints/{task}_{model_name}', num_labels=num_dict[task])
     elif tuned == "pretrained":
         model = model_dict[model_name].from_pretrained(path_dict[model_name], num_labels=num_dict[task])
-    elif tuned.start_with("random"):  
+        # elif tuned starts with "random"
+    elif tuned.startswith("random"):
         config = AutoConfig.from_pretrained(get_config(model_name), num_labels=num_dict[task])
         model = model_dict[model_name](config)
         
