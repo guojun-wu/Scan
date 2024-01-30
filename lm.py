@@ -27,10 +27,13 @@ def load_model(model_name="gpt2", tuned=False, task="sst"):
     tokenizer = AutoTokenizer.from_pretrained(path_dict[model_name])
 
     # Load model based on model_name
-    if tuned:
+    if tuned == "finetuned":
         model = model_dict[model_name].from_pretrained(f'checkpoints/{task}_{model_name}', num_labels=num_dict[task])
-    else:
+    elif tuned == "pretrained":
         model = model_dict[model_name].from_pretrained(path_dict[model_name], num_labels=num_dict[task])
+    elif tuned == "random":
+        model = model_dict[model_name].from_pretrained(path_dict[model_name], num_labels=num_dict[task])
+        model.init_weights()
         
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -61,14 +64,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-t','--task', type=str, default='sst')
     parser.add_argument('-m','--model_name', type=str, default='gpt2')
-    parser.add_argument('--tuned', action='store_true', help='finetuned model')
+    parser.add_argument('--tuned', type=str, default='random')
     args = parser.parse_args()
     model_name = args.model_name
     tuned = args.tuned
     task = args.task
     
-    tokenizer, model = load_model(model_name, tuned=tuned, task=task)
-    num_labels = model.config.num_labels    
+    tokenizer, model = load_model(model_name, tuned=tuned, task=task)  
 
     data = pd.read_csv(f"data/{task}/test.csv", sep=",")
     df_saliency = pd.DataFrame(columns=["sid", "l1_grad"])
@@ -80,10 +82,12 @@ def main():
             "l1_grad": [l1_grad.tolist()],
         })
         df_saliency = pd.concat([df_saliency, new_row], ignore_index=True)
-    if tuned:
+    if tuned == "finetuned":
         output_path = f"data/{task}/{model_name}_saliency.csv"
-    else:
-        output_path = f"data/{task}/{model_name}_control_saliency.csv"
+    elif tuned == "pretrained":
+        output_path = f"data/{task}/{model_name}_pretrained_saliency.csv"
+    elif tuned == "random":
+        output_path = f"data/{task}/{model_name}_random_saliency.csv"
 
     df_saliency.to_csv(output_path, index=False)
 

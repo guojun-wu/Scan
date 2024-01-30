@@ -4,7 +4,9 @@ import os
 import ast
 import argparse 
 import scipy.stats  
+import matplotlib.pyplot as plt
 
+name_dict = {"bnc": "BNC", "bert": "BERT_BASE", "bert_large": "BERT_Large", "roberta": "RoBERTa", "distilbert": "DistilBERT", "gpt2": "GPT2", "gpt2_large": "GPT2_Large", "opt": "OPT"}
 def read_data(task):
     models = ["bert", "bert_large", "roberta", "distilbert", "gpt2", "gpt2_large", "opt"]
     fix_df = pd.read_csv(f"data/{task}/fixation.csv", sep=",")
@@ -42,8 +44,40 @@ def generate_tex(corr_df):
 
     for key in corr_df.keys():
         df[key] = [np.mean(corr_df[key])]
+    
+    df = df.rename(index={0: "Mean"})
+    df = df.rename(columns=name_dict)
     # generate latex table
     print(df)
+    df.style.format("{:.2f}").to_latex("result/correlations.tex")
+
+def draw_boxplot(corr_df):
+    # get the mean and std of correlations
+    mean = {}
+    std = {}
+    for key in corr_df.keys():
+        mean[name_dict[key]] = np.mean(corr_df[key])
+        std[name_dict[key]] = np.std(corr_df[key])
+
+    means = [mean[name] for name in name_dict.values()]
+    stds = [std[name] for name in name_dict.values()]
+
+    # Create boxplot
+    fig, ax = plt.subplots()
+    ax.bar(mean.keys(), means, yerr=stds, capsize=10)
+    ax.set_ylabel('Correlation Coefficient')
+    ax.set_title('Correlation Coefficients Boxplot')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    # Save or display the plot
+    plt.savefig('correlation_boxplot.png')
+    plt.show()
+
+    
+    
+
+    
    
 
 def main():
@@ -54,6 +88,7 @@ def main():
     df = read_data(args.task)
     corr_df = get_corr(df)
     generate_tex(corr_df)
+    draw_boxplot(corr_df)
 
 
 if __name__ == "__main__":
