@@ -7,15 +7,19 @@ import scipy.stats
 import matplotlib.pyplot as plt
 
 name_dict = {"bnc": "BNC", "bert": "BERT_BASE", "bert_large": "BERT_Large", "roberta": "RoBERTa", "distilbert": "DistilBERT", "gpt2": "GPT2", "gpt2_large": "GPT2_Large", "opt": "OPT"}
-def read_data(task):
+def read_data(tuned, task):
     models = ["bert", "bert_large", "roberta", "distilbert", "gpt2", "gpt2_large", "opt"]
     fix_df = pd.read_csv(f"data/{task}/fixation.csv", sep=",")
-    freq_df = pd.read_csv(f"data/{task}/freq.csv", sep=",")
+    if tuned == "finetuned":
+        freq_df = pd.read_csv(f"data/{task}/freq.csv", sep=",")
 
-    df = fix_df.merge(freq_df, on="sid")
-    df = df.rename(columns={"freq": "bnc", "list_dur": "fixation"})
+        df = fix_df.merge(freq_df, on="sid")
+        df = df.rename(columns={"freq": "bnc", "list_dur": "fixation"})
+    else:
+        df = fix_df
+        df = df.rename(columns={"list_dur": "fixation"})
     for model in models:
-        model_df = pd.read_csv(f"data/{task}/{model}_saliency.csv", sep=",")
+        model_df = pd.read_csv(f"data/{task}/{model}_{tuned}_saliency.csv", sep=",")
         model_df = model_df[["sid", "l1_grad"]]
         model_df = model_df.rename(columns={"l1_grad": model})
         df = df.merge(model_df, on="sid")
@@ -74,21 +78,16 @@ def draw_boxplot(corr_df):
     plt.savefig('correlation_boxplot.png')
     plt.show()
 
-    
-    
-
-    
-   
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t","--task", type=str, default="sst")
+    parser.add_argument("--tuned", type=str, default="finetuned")
     args = parser.parse_args()
 
-    df = read_data(args.task)
+    df = read_data(args.tuned, args.task)
     corr_df = get_corr(df)
     generate_tex(corr_df)
-    draw_boxplot(corr_df)
+    # draw_boxplot(corr_df)
 
 
 if __name__ == "__main__":
