@@ -1,8 +1,17 @@
 import pandas as pd
+import numpy as np
 import argparse 
 import os
 from saliency import *
 from tqdm import tqdm
+from config import *
+from transformers import (
+    AutoConfig, 
+    GPT2Config,
+    BertConfig,
+    RobertaConfig,
+    DistilBertConfig,
+)
 
 def load_model(model_name="gpt2", tuned=False, task="sst"):
     num_dict = {"sst": 3, "wiki": 9}
@@ -32,8 +41,9 @@ def load_model(model_name="gpt2", tuned=False, task="sst"):
     elif tuned == "pretrained":
         model = model_dict[model_name].from_pretrained(path_dict[model_name], num_labels=num_dict[task])
     elif tuned == "random":
-        model = model_dict[model_name].from_pretrained(path_dict[model_name], num_labels=num_dict[task])
-        model.init_weights()
+        np.random.seed(42)
+        config = AutoConfig.from_pretrained(get_config(model_name), num_labels=num_dict[task])
+        model = model_dict[model_name](config)
         
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -82,12 +92,8 @@ def main():
             "l1_grad": [l1_grad.tolist()],
         })
         df_saliency = pd.concat([df_saliency, new_row], ignore_index=True)
-    if tuned == "finetuned":
-        output_path = f"data/{task}/{model_name}_saliency.csv"
-    elif tuned == "pretrained":
-        output_path = f"data/{task}/{model_name}_pretrained_saliency.csv"
-    elif tuned == "random":
-        output_path = f"data/{task}/{model_name}_random_saliency.csv"
+
+    output_path = f"data/{task}/{model_name}_{tuned}_saliency.csv"
 
     df_saliency.to_csv(output_path, index=False)
 
