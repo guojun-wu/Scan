@@ -107,7 +107,7 @@ def main():
             for key in corr_df.keys():
                 corr_df[key] += tmp_corr_df[key]
         for key in corr_df.keys():
-            corr_df[key] = [x/len(seeds) for x in corr_df[key]] 
+            corr_df[key] = [x/(len(seeds)+1) for x in corr_df[key]] 
     else:
         df = read_data(tuned, task)
         corr_df = get_corr(df)
