@@ -30,25 +30,24 @@ def read_data(tuned, task):
     return df
 
 def get_corr(df):
-    corr_df = {}
+    corr_df = pd.DataFrame()
     for col in df.columns:
+        corr_list = []
         if col not in ["sid", "fixation"]:
-            corr_df[col] = []
             for i in range(len(df)):
                 if len(df[col][i]) != len(df["fixation"][i]):
-                    print("Error: length of fixation and explanation does not match")
-                    print(col, i)
-                    break
-                corr_df[col].append(scipy.stats.spearmanr(df[col][i], df["fixation"][i])[0])
-                corr_df[col] = [x for x in corr_df[col] if str(x) != 'nan']
+                    raise ValueError(f"Length of {col} and fixation is not the same for {i}")
+                corr, _ = scipy.stats.spearmanr(df[col][i], df["fixation"][i])
+                corr_list.append(corr)
+            corr_df[col] = corr_list
     return corr_df
 
 def generate_tex(corr_df):
     # get the mean and standard error of correlations
     mean = {}
     std_error = {}
-    for key in corr_df.keys():
-        mean[name_dict[key]] = np.mean(corr_df[key])
+    for key in corr_df.columns:
+        mean[name_dict[key]] = corr_df[key].mean()
         std_error[name_dict[key]] = np.std(corr_df[key])/np.sqrt(len(corr_df[key]))
 
     # Create pd dataframe for mean and std
@@ -57,9 +56,6 @@ def generate_tex(corr_df):
     corr_df = corr_df.T
     corr_df = corr_df.round(3)
 
-    # Save to tex
-    corr_df.to_latex("correlation.tex")
-
     print(corr_df)
 
 
@@ -67,7 +63,7 @@ def draw_boxplot(corr_df):
     # get the mean and std of correlations
     mean = {}
     std = {}
-    for key in corr_df.keys():
+    for key in corr_df.columns:
         mean[name_dict[key]] = np.mean(corr_df[key])
         std[name_dict[key]] = np.std(corr_df[key])
 
