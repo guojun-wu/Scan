@@ -72,7 +72,7 @@ def generate_tex(corr_df):
     corr_df = corr_df.round(3)
 
     # Save to tex
-    corr_df.style.to_latex("correlation.tex")
+    corr_df.to_latex("correlation.tex")
 
     print(corr_df)
 
