@@ -44,16 +44,24 @@ def get_corr(df):
     return corr_df
 
 def generate_tex(corr_df):
-    df = pd.DataFrame()
-
+    # get the mean and standard error of correlations
+    mean = {}
+    std_error = {}
     for key in corr_df.keys():
-        df[key] = [np.mean(corr_df[key])]
-    
-    df = df.rename(index={0: "Mean"})
-    df = df.rename(columns=name_dict)
-    # generate latex table
-    print(df)
-    df.style.format("{:.2f}").to_latex("result/correlations.tex")
+        mean[name_dict[key]] = np.mean(corr_df[key])
+        std_error[name_dict[key]] = np.std(corr_df[key])/np.sqrt(len(corr_df[key]))
+
+    # Create pd dataframe for mean and std
+    corr_df = pd.DataFrame([mean, std_error])
+    corr_df = corr_df.rename(index={0: "Mean", 1: "Standard Error"})
+    corr_df = corr_df.T
+    corr_df = corr_df.round(3)
+
+    # Save to tex
+    corr_df.style.to_latex("correlation.tex")
+
+    print(corr_df)
+
 
 def draw_boxplot(corr_df):
     # get the mean and std of correlations

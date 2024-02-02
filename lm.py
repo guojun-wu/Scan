@@ -92,8 +92,8 @@ def main():
             "l1_grad": [l1_grad.tolist()],
         })
         df_saliency = pd.concat([df_saliency, new_row], ignore_index=True)
-
-    output_path = f"result/{task}/{model_name}_{tuned}_saliency.csv"
+        
+    output_path = f"data/{task}/{model_name}_{tuned}_saliency.csv"
 
     df_saliency.to_csv(output_path, index=False)
 
