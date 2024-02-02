@@ -97,7 +97,8 @@ def main():
 
     if tuned == "random":
         # for every random seed, generate the correlation
-        seeds = [str(i) for i in range(1, 2)]
+        seeds = [str(i) for i in range(1, 3)]
+        print(seeds)
         df = read_data(tuned, task)
         corr_df = get_corr(df)
         for seed in seeds:
@@ -110,7 +111,7 @@ def main():
     else:
         df = read_data(tuned, task)
         corr_df = get_corr(df)
-        
+
     generate_tex(corr_df)
     # draw_boxplot(corr_df)
 
