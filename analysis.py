@@ -21,8 +21,8 @@ def read_data(tuned, task):
     for model in models:
         if tuned.startswith("random"):
             random_df = pd.read_csv(f"data/{task}/{model}_{tuned}_saliency.csv", sep=",")
-            random_df = model_df[["sid", "l1_grad"]]
-            random_df = model_df.rename(columns={"l1_grad": "0"})
+            random_df = random_df[["sid", "l1_grad"]]
+            random_df = random_df.rename(columns={"l1_grad": "0"})
             model_df = random_df
             for i in range(1, 10):
                 if os.path.exists(f"data/{task}/{model}_{tuned}{i}_saliency.csv"):
