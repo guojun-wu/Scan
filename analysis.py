@@ -19,20 +19,6 @@ def read_data(tuned, task):
         df = fix_df
         df = df.rename(columns={"list_dur": "fixation"})
     for model in models:
-        if tuned.startswith("random"):
-            random_df = pd.read_csv(f"data/{task}/{model}_{tuned}_saliency.csv", sep=",")
-            random_df = random_df[["sid", "l1_grad"]]
-            random_df = random_df.rename(columns={"l1_grad": "0"})
-            model_df = random_df
-            for i in range(1, 10):
-                if os.path.exists(f"data/{task}/{model}_{tuned}{i}_saliency.csv"):
-                    random_df = pd.read_csv(f"data/{task}/{model}_{tuned}{i}_saliency.csv", sep=",")
-                    random_df = random_df[["sid", "l1_grad"]]
-                    random_df = random_df.rename(columns={"l1_grad": str(i)})
-                    model_df = model_df.merge(random_df, on="sid")
-            model_df["random"] = model_df.iloc[:, 1:].mean(axis=1)
-            model_df = model_df[["sid", "random"]]
-
         model_df = pd.read_csv(f"data/{task}/{model}_{tuned}_saliency.csv", sep=",")
         model_df = model_df[["sid", "l1_grad"]]
         model_df = model_df.rename(columns={"l1_grad": model})
@@ -106,8 +92,25 @@ def main():
     parser.add_argument("--tuned", type=str, default="finetuned")
     args = parser.parse_args()
 
-    df = read_data(args.tuned, args.task)
-    corr_df = get_corr(df)
+    tuned = args.tuned
+    task = args.task
+
+    if tuned == "random":
+        # for every random seed, generate the correlation
+        seeds = [str(i) for i in range(1, 2)]
+        df = read_data(tuned, task)
+        corr_df = get_corr(df)
+        for seed in seeds:
+            tmp_df = read_data(f"random{seed}", task)
+            tmp_corr_df = get_corr(tmp_df)
+            for key in corr_df.keys():
+                corr_df[key] += tmp_corr_df[key]
+        for key in corr_df.keys():
+            corr_df[key] = [x/len(seeds) for x in corr_df[key]] 
+    else:
+        df = read_data(tuned, task)
+        corr_df = get_corr(df)
+        
     generate_tex(corr_df)
     # draw_boxplot(corr_df)
 
