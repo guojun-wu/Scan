@@ -18,7 +18,7 @@ def average_fixation(df):
 
 def extract_fixation_data(path, task):
     # path is the path of the fixation data
-    df_dur = pd.DataFrame(columns=['id', 'sn', 'list_dur'])
+    df_dur = pd.DataFrame(columns=['id', 'sid', 'list_dur'])
     df = pd.read_csv(path, sep='\t')
     subjects = df['id'].unique()
     for subject in subjects:
@@ -34,9 +34,10 @@ def extract_fixation_data(path, task):
                 df_word = df_sentence[df_sentence['wn'] == word]
                 duration = df_word['dur'].sum()
                 list_dur[word-1] = duration
-            df_dur = pd.concat([df_dur, pd.DataFrame({'id': subject, 'sn': sentence, 'list_dur': [list_dur.tolist()]})], ignore_index=True)
-    df_avg = average_fixation(df_dur)
-    df_avg.to_csv(f'data/{task}/fixation.csv', index=False)
+            df_dur = pd.concat([df_dur, pd.DataFrame({'id': subject, 'sid': sentence, 'list_dur': [list_dur.tolist()]})], ignore_index=True)
+    df_dur.to_csv(f'data/{task}/fixation_subj.csv', index=False)
+    # df_avg = average_fixation(df_dur)
+    # df_avg.to_csv(f'data/{task}/fixation.csv', index=False)
 
                 
 def main():

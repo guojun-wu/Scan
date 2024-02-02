@@ -5,6 +5,7 @@ import ast
 import argparse 
 import scipy.stats  
 import matplotlib.pyplot as plt
+from config import subj_sst_acc, subj_wiki_acc
 
 name_dict = {"bnc": "BNC", "bert": "BERT_BASE", "bert_large": "BERT_Large", "roberta": "RoBERTa", "distilbert": "DistilBERT", "gpt2": "GPT2", "gpt2_large": "GPT2_Large", "opt": "OPT"}
 def read_data(tuned, task):
@@ -82,14 +83,72 @@ def draw_boxplot(corr_df):
     plt.savefig('correlation_boxplot.png')
     plt.show()
 
+def subject_analysis(task):
+    corr_df = pd.DataFrame()
+    subj_df = pd.read_csv(f'data/{task}/fixation_subj.csv', sep=",")
+    bert_df = pd.read_csv(f'data/{task}/bert_finetuned_saliency.csv', sep=",")
+    subj_df['list_dur'] = subj_df['list_dur'].apply(ast.literal_eval)
+    bert_df['l1_grad'] = bert_df['l1_grad'].apply(ast.literal_eval)
+    print(subj_df.head())
+    subjs = subj_df['id'].unique()
+    for subj in subjs:
+        df = subj_df[subj_df['id'] == subj]
+        df = df.merge(bert_df, on="sid")
+        
+        corr_list = []
+        for i in range(len(df)):
+            if len(df["list_dur"][i]) != len(df["l1_grad"][i]):
+                raise ValueError(f"Length of {col} and fixation is not the same for {i}")
+            corr, _ = scipy.stats.spearmanr(df["l1_grad"][i], df["list_dur"][i])
+            corr_list.append(corr)
+        # pad the list to the same length
+        corr_list += [np.nan] * (len(bert_df) - len(corr_list))
+        corr_df[subj] = corr_list
+    print(corr_df.head())
+    corr_df.to_csv(f'data/{task}/subj_corr.csv', index=False)    
+
+def draw_subject_boxplot(task):
+    subj_df = pd.read_csv(f'data/{task}/subj_corr.csv', sep=",")
+    mean = subj_df.mean()
+    std = subj_df.std() / np.sqrt(len(subj_df))
+    print(mean)
+
+    # sort the mean by the accuracy
+    if task == "sst":
+        mean = mean.sort_index(key=lambda x: [subj_sst_acc[subj] for subj in x])
+    else:
+        mean = mean.sort_index(key=lambda x: [subj_wiki_acc[subj] for subj in x])
+    
+    # Create dotplot
+    fig, ax = plt.subplots()
+    ax.bar(mean.index, mean, yerr=std, capsize=10)
+    ax.set_title('Relation Extraction Subject Correlation')
+    ax.set_ylabel('Spearman Correlation')
+    ax.set_xlabel('Participants (ranked by accuracy from left to right)')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    # Save or display the plot
+    plt.savefig(f'{task}_subject_correlation.png')
+    plt.show()
+    
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t","--task", type=str, default="sst")
     parser.add_argument("--tuned", type=str, default="finetuned")
+    parser.add_argument("--subject", action="store_true")
     args = parser.parse_args()
 
     tuned = args.tuned
     task = args.task
+    subject = args.subject
+
+    if subject:
+        subject_analysis(task)
+        draw_subject_boxplot(task)
+        return
 
     if tuned == "random":
         # for every random seed, generate the correlation
