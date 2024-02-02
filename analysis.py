@@ -26,7 +26,6 @@ def read_data(tuned, task):
             model_df = random_df
             for i in range(1, 10):
                 if os.path.exists(f"data/{task}/{model}_{tuned}{i}_saliency.csv"):
-                    print(f"data/{task}/{model}_{tuned}{i}_saliency.csv")
                     random_df = pd.read_csv(f"data/{task}/{model}_{tuned}{i}_saliency.csv", sep=",")
                     random_df = random_df[["sid", "l1_grad"]]
                     random_df = random_df.rename(columns={"l1_grad": str(i)})
