@@ -6,6 +6,7 @@ import argparse
 import scipy.stats  
 import matplotlib.pyplot as plt
 from config import subj_sst_acc, subj_wiki_acc
+from matplotlib.font_manager import FontProperties
 
 name_dict = {"bnc": "BNC", "bert": "BERT_BASE", "bert_large": "BERT_Large", "roberta": "RoBERTa", "distilbert": "DistilBERT", "gpt2": "GPT2", "gpt2_large": "GPT2_Large", "opt": "OPT"}
 def read_data(tuned, task):
@@ -59,7 +60,6 @@ def generate_tex(corr_df):
 
     print(corr_df)
 
-
 def draw_boxplot(corr_df):
     # get the mean and std of correlations
     mean = {}
@@ -86,7 +86,7 @@ def draw_boxplot(corr_df):
 def subject_analysis(task):
     corr_df = pd.DataFrame()
     subj_df = pd.read_csv(f'data/{task}/fixation_subj.csv', sep=",")
-    bert_df = pd.read_csv(f'data/{task}/bert_finetuned_saliency.csv', sep=",")
+    bert_df = pd.read_csv(f'data/{task}/gpt2_finetuned_saliency.csv', sep=",")
     subj_df['list_dur'] = subj_df['list_dur'].apply(ast.literal_eval)
     bert_df['l1_grad'] = bert_df['l1_grad'].apply(ast.literal_eval)
     print(subj_df.head())
@@ -107,31 +107,46 @@ def subject_analysis(task):
     print(corr_df.head())
     corr_df.to_csv(f'data/{task}/subj_corr.csv', index=False)    
 
-def draw_subject_boxplot(task):
+def draw_subject_barplot(task):
     subj_df = pd.read_csv(f'data/{task}/subj_corr.csv', sep=",")
-    mean = subj_df.mean()
-    std = subj_df.std() / np.sqrt(len(subj_df))
-    print(mean)
 
-    # sort the mean by the accuracy
+    mean = subj_df.mean()
+    std_error = subj_df.std() / np.sqrt(len(subj_df))
+
+    # Sort the mean by accuracy
     if task == "sst":
         mean = mean.sort_index(key=lambda x: [subj_sst_acc[subj] for subj in x])
     else:
         mean = mean.sort_index(key=lambda x: [subj_wiki_acc[subj] for subj in x])
-    
-    # Create dotplot
+
+    # Create bar plot
     fig, ax = plt.subplots()
-    ax.bar(mean.index, mean, yerr=std, capsize=10)
-    ax.set_title('Relation Extraction Subject Correlation')
+    bars = ax.bar(mean.index, mean, yerr=std_error, capsize=5, color='skyblue', edgecolor='black')
+
+    # Annotate with subj_sst_acc values below the bars
+    for bar, subj in zip(bars, mean.index):
+        acc = subj_sst_acc[subj]
+        ax.text(bar.get_x() + bar.get_width() / 2, -0.02,
+                f'{subj}', ha='center', va='center', color='black', fontproperties=FontProperties(size=11))
+        ax.text(bar.get_x() + bar.get_width() / 2, 0.01,
+                f'{acc:.2f}', ha='center', va='center', color='black', fontproperties=FontProperties(size=8, style='italic'))
+
+    # Set plot title and axis labels
+    ax.set_title('Relation Extraction')
     ax.set_ylabel('Spearman Correlation')
-    ax.set_xlabel('Participants (ranked by accuracy from left to right)')
-    plt.xticks(rotation=45)
+
+    # don't show x-axis label
+    ax.set_xticklabels([])
+
+    # Adjust layout
     plt.tight_layout()
 
-    # Save or display the plot
-    plt.savefig(f'{task}_subject_correlation.png')
+    # Save the plot as a high-resolution image
+    plt.savefig(f'{task}_subject_correlation.png', dpi=300)
+
+    # Display the plot
     plt.show()
-    
+
 
 
 def main():
@@ -147,7 +162,7 @@ def main():
 
     if subject:
         subject_analysis(task)
-        draw_subject_boxplot(task)
+        draw_subject_barplot(task)
         return
 
     if tuned == "random":
