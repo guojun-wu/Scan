@@ -105,11 +105,6 @@ def subject_analysis(task, model_name):
         corr_df[subj] = corr_list
     corr_df.to_csv(f'data/{task}/{model_name}_subj_corr.csv', index=False)    
 
-import matplotlib.pyplot as plt
-from matplotlib.font_manager import FontProperties
-import pandas as pd
-import numpy as np
-
 def draw_subject_barplot(task_names=["sst", "wiki"], model_name="gpt2"):
     fig, axs = plt.subplots(1, len(task_names), figsize=(14, 4), sharey=True)
 
@@ -117,6 +112,12 @@ def draw_subject_barplot(task_names=["sst", "wiki"], model_name="gpt2"):
         mean_df = pd.read_csv(f'data/{task}/{model_name}_subj_corr.csv', sep=",")
         mean = mean_df.mean()
         std_error = mean_df.std() / np.sqrt(len(mean_df))
+        print(task)
+        a = 0
+        for subj in mean.index:
+            a += mean[subj]
+        print(a/len(mean))
+        
 
         # Sort the mean by accuracy (assuming subj_sst_acc is defined somewhere)
         if task == "sst":
