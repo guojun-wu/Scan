@@ -5,7 +5,7 @@ import ast
 import argparse 
 import scipy.stats  
 import matplotlib.pyplot as plt
-from config import subj_sst_acc, subj_wiki_acc
+from config import subj_sst_acc, subj_wiki_acc, task_title
 from matplotlib.font_manager import FontProperties
 
 name_dict = {"bnc": "BNC", "bert": "BERT_BASE", "bert_large": "BERT_Large", "roberta": "RoBERTa", "distilbert": "DistilBERT", "gpt2": "GPT2", "gpt2_large": "GPT2_Large", "opt": "OPT"}
@@ -83,17 +83,16 @@ def draw_boxplot(corr_df):
     plt.savefig('correlation_boxplot.png')
     plt.show()
 
-def subject_analysis(task):
+def subject_analysis(task, model_name):
     corr_df = pd.DataFrame()
     subj_df = pd.read_csv(f'data/{task}/fixation_subj.csv', sep=",")
-    bert_df = pd.read_csv(f'data/{task}/gpt2_finetuned_saliency.csv', sep=",")
+    model_df = pd.read_csv(f'data/{task}/{model_name}_finetuned_saliency.csv', sep=",")
     subj_df['list_dur'] = subj_df['list_dur'].apply(ast.literal_eval)
-    bert_df['l1_grad'] = bert_df['l1_grad'].apply(ast.literal_eval)
-    print(subj_df.head())
+    model_df['l1_grad'] = model_df['l1_grad'].apply(ast.literal_eval)
     subjs = subj_df['id'].unique()
     for subj in subjs:
         df = subj_df[subj_df['id'] == subj]
-        df = df.merge(bert_df, on="sid")
+        df = df.merge(model_df, on="sid")
         
         corr_list = []
         for i in range(len(df)):
@@ -102,51 +101,62 @@ def subject_analysis(task):
             corr, _ = scipy.stats.spearmanr(df["l1_grad"][i], df["list_dur"][i])
             corr_list.append(corr)
         # pad the list to the same length
-        corr_list += [np.nan] * (len(bert_df) - len(corr_list))
+        corr_list += [np.nan] * (len(model_df) - len(corr_list))
         corr_df[subj] = corr_list
-    print(corr_df.head())
-    corr_df.to_csv(f'data/{task}/subj_corr.csv', index=False)    
+    corr_df.to_csv(f'data/{task}/{model_name}_subj_corr.csv', index=False)    
 
-def draw_subject_barplot(task):
-    subj_df = pd.read_csv(f'data/{task}/subj_corr.csv', sep=",")
+import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
+import pandas as pd
+import numpy as np
 
-    mean = subj_df.mean()
-    std_error = subj_df.std() / np.sqrt(len(subj_df))
+def draw_subject_barplot(task_names=["sst", "wiki"], model_name="gpt2"):
+    fig, axs = plt.subplots(1, len(task_names), figsize=(14, 4), sharey=True)
 
-    # Sort the mean by accuracy
-    if task == "sst":
-        mean = mean.sort_index(key=lambda x: [subj_sst_acc[subj] for subj in x])
-    else:
-        mean = mean.sort_index(key=lambda x: [subj_wiki_acc[subj] for subj in x])
+    for j, task in enumerate(task_names):
+        mean_df = pd.read_csv(f'data/{task}/{model_name}_subj_corr.csv', sep=",")
+        mean = mean_df.mean()
+        std_error = mean_df.std() / np.sqrt(len(mean_df))
 
-    # Create bar plot
-    fig, ax = plt.subplots()
-    bars = ax.bar(mean.index, mean, yerr=std_error, capsize=5, color='skyblue', edgecolor='black')
+        # Sort the mean by accuracy (assuming subj_sst_acc is defined somewhere)
+        if task == "sst":
+            mean = mean.sort_index(key=lambda x: [subj_sst_acc[subj] for subj in x])
+            std_error = std_error.sort_index(key=lambda x: [subj_sst_acc[subj] for subj in x])
+        else:
+            mean = mean.sort_index(key=lambda x: [subj_wiki_acc[subj] for subj in x])
+            std_error = std_error.sort_index(key=lambda x: [subj_wiki_acc[subj] for subj in x])
 
-    # Annotate with subj_sst_acc values below the bars
-    for bar, subj in zip(bars, mean.index):
-        acc = subj_sst_acc[subj]
-        ax.text(bar.get_x() + bar.get_width() / 2, -0.02,
-                f'{subj}', ha='center', va='center', color='black', fontproperties=FontProperties(size=11))
-        ax.text(bar.get_x() + bar.get_width() / 2, 0.01,
-                f'{acc:.2f}', ha='center', va='center', color='black', fontproperties=FontProperties(size=8, style='italic'))
+        # Create bar plot
+        bars = axs[j].bar(np.arange(len(mean)), mean, yerr=std_error, capsize=5,
+                          color='skyblue', edgecolor='black', label=task.upper())
 
-    # Set plot title and axis labels
-    ax.set_title('Relation Extraction')
-    ax.set_ylabel('Spearman Correlation')
+        # Annotate with accuracy values above the bars
+        for bar, subj in zip(bars, mean.index):
+            acc = subj_sst_acc[subj] if task == "sst" else subj_wiki_acc[subj]
+            axs[j].text(bar.get_x() + bar.get_width() / 2, 0.09,
+                        f'{subj}', ha='center', va='center', color='black', fontsize=11)
+            axs[j].text(bar.get_x() + bar.get_width() / 2, 0.11,
+                        f'{acc:.2f}', ha='center', va='center', color='black', fontsize=8, style='italic')
 
-    # don't show x-axis label
-    ax.set_xticklabels([])
+        # Set plot title and axis labels
+        axs[j].set_title(task_title[task], fontsize=12)
+        axs[j].set_xticks([])
+        # Set y-axis range
+        axs[j].set_ylim(0.1, 0.45)
+
+        # Set y-axis label
+        if j == 0:
+            axs[j].set_ylabel('Spearman Correlation', fontsize=12)
 
     # Adjust layout
     plt.tight_layout()
-
-    # Save the plot as a high-resolution image
-    plt.savefig(f'{task}_subject_correlation.png', dpi=300)
+    plt.savefig(f'{model_name}_subject_correlation.png', dpi=300)
 
     # Display the plot
     plt.show()
 
+# Example usage
+draw_subject_barplot()
 
 
 def main():
@@ -161,8 +171,10 @@ def main():
     subject = args.subject
 
     if subject:
-        subject_analysis(task)
-        draw_subject_barplot(task)
+        model_names = ["bert", "gpt2"]
+        for model_name in model_names:
+            subject_analysis(task, model_name)
+        draw_subject_barplot()
         return
 
     if tuned == "random":

@@ -24,5 +24,5 @@ subj_sst_acc = {"ZAB": 76.09,"ZDM": 76.09,"ZDN": 89.13, "ZGW": 71.74, "ZJM": 80.
                 "ZJN": 54.34, "ZJS":91.30, "ZKB":89.13, "ZKH":76.09, "ZKW":69.57, "ZMG":91.30, "ZPH":89.13}
 subj_wiki_acc = {"ZAB": 90.42, "ZDM": 96.81, "ZDN": 92.87, "ZGW": 92.14, "ZJM": 79.12,
                 "ZJN": 96.56, "ZJS": 93.86, "ZKB": 95.33, "ZKH": 93.12, "ZKW": 94.84, "ZMG": 95.82, "ZPH": 97.05}
-
+task_title = {"sst": "Sentiment Analysis", "wiki": "Relation Extraction"}
 
