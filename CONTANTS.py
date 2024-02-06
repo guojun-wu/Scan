@@ -1,7 +1,7 @@
 
 DATA_PATH = "data" 
 CHECKPOINT_PATH = "checkpoints" 
-RESULT_PATH = "/path/to/results" 
+RESULT_PATH = "results" 
 
 
 url_dict = {
@@ -27,6 +27,6 @@ path_dict = {
         "gpt2_large": "gpt2-large",
         "distilbert": "distilbert-base-uncased",
         "opt": "facebook/opt-350m"}
-        
+
 num_dict = {"sst": 3, "wiki": 9}
 

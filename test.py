@@ -1,5 +1,5 @@
 from finetune import *
-from CONTANTS import DATA_PATH, CHECKPOINT_PATH
+from CONTANTS import DATA_PATH, CHECKPOINT_PATH, path_dict
 
 # Load the model
 def load_test_data(task):
@@ -36,17 +36,9 @@ def test(model, tokenizer, task):
     print(f"Test accuracy: {accuracy:.4f}")
 
 def load_model(model_name, task):
-    model_dict = {
-        "distilbert": "distilbert-base-uncased",
-        "bert": "bert-base-uncased", 
-        "roberta": "roberta-base", 
-        "gpt2": "gpt2", 
-        "opt": "facebook/opt-350m",
-        "bert_large": "bert-large-uncased",
-        "gpt2_large": "gpt2-large",
-    }
+    
     model = AutoModelForSequenceClassification.from_pretrained(f"{CHECKPOINT_PATH}/{task}_{model_name}")
-    tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
+    tokenizer = AutoTokenizer.from_pretrained(path_dict[model_name])
     if 'gpt2' in model_name:
         tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         model.resize_token_embeddings(len(tokenizer))

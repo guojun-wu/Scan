@@ -81,9 +81,6 @@ def main():
             "l1_grad": [l1_grad.tolist()],
         })
         df_saliency = pd.concat([df_saliency, new_row], ignore_index=True)
-    
-    if not os.path.exists(f"{RESULT_PATH}/{task}"):
-        os.makedirs(f"{RESULT_PATH}/{task}")
         
     output_path = f"{RESULT_PATH}/{task}/{model_name}_{tuned}_saliency.csv"
 
