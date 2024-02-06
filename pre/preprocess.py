@@ -7,7 +7,7 @@ import pandas as pd
 import scipy.io as io
 from tqdm import tqdm
 
-# Adapted from ScanDL repo: https://github.com/DiLi-Lab/ScanDL
+# Adapted from ScanDL (Bolliger et al., 2023): https://github.com/DiLi-Lab/ScanDL
 
 def ZUCO_read_words(directory: str, task: str) -> None:
     # task: zuco11, zuco12, zuco21
@@ -47,20 +47,6 @@ def ZUCO_read_words(directory: str, task: str) -> None:
                 )
 
                 df = pd.concat([df, df_tmp])
-
-    else:
-        mat = h5py.File(sub_file_path[full_subj])
-        sentence_data = mat['sentenceData/word']
-        for sn_idx in range(len(sentence_data)):
-            sn_data = sentence_data[sn_idx]
-            word_data = mat[sn_data[0]]['content']
-            for word_idx in range(len(word_data)):
-                item = word_data[word_idx]
-                word = ''.join(chr(c) for c in mat[item[0]][()].reshape(-1))
-                df_tmp = pd.DataFrame(
-                    [[sn_idx + 1, word_idx + 1, word]], columns=['SN', 'NW', 'WORD'],
-                )
-                df = pd.concat([df, df_tmp])
     df.to_csv(save_path, sep='\t', index=False)
 
 
@@ -81,13 +67,8 @@ def add_word_len(directory, task):
 
 
 def ZUCO_read_scanpath(directory, task):
-    # TODO: ZUCO2: exclude YMH due to incomplete data because of dyslexia
-    # if subject != 'YMH': already cleaned up in the dataset
-    # task: zuco11, zuco12, zuco21
     if task.startswith('zuco1'):
         directory = directory + 'zuco/'
-    elif task == 'zuco21':
-        directory = directory + 'zuco2/'
     else:
         raise NotImplementedError(f'{task=} unknown')
     directory = os.path.join(directory, f'task{task[-1]}', 'Matlab_files')
@@ -157,52 +138,6 @@ def ZUCO_read_scanpath(directory, task):
                         ]], columns=['id', 'sn', 'nw', 'wn', 'fl', 'dur'],
                     )
                     df = pd.concat([df, df_tmp])
-            
-        else:
-            mat = h5py.File(fpath)
-            word_bound = mat['sentenceData/wordbounds']
-            scanpath_data = mat['sentenceData/allFixations']
-            for sn_idx in tqdm(range(len(scanpath_data))):
-                # compute word boundary
-                word_bound_sn_data = word_bound[sn_idx]
-                word_boundary = mat[word_bound_sn_data[0]][()]
-                word_boundary = np.swapaxes(word_boundary, 1, 0)
-                num_word = word_boundary.shape[0]
-
-                # compute scanpath
-                scanpath_sn_data = scanpath_data[sn_idx]
-                # skip empty scanpath
-                try:
-                    x = mat[scanpath_sn_data[0]]['x']
-                except KeyError:
-                    continue
-                y = mat[scanpath_sn_data[0]]['y']
-                fix_dur = mat[scanpath_sn_data[0]]['duration']
-
-                # iterate over each fixation, match to the corresponding word in the sentence
-                for fix_idx in range(len(x)):
-                    word_idx = np.where(
-                        (word_boundary[:, 0] <= x[fix_idx]) &
-                        (word_boundary[:, 2] >= x[fix_idx]) &
-                        (word_boundary[:, 1] <= y[fix_idx]) &
-                        (word_boundary[:, 3] >= y[fix_idx]),
-                    )
-                    assert len(word_idx) == 1, 'more than 1 word is matched!'
-                    # skip fixations outside all boundary boxes
-                    if word_idx[0].size == 0:
-                        continue
-                    fl = (
-                        (x[fix_idx] - word_boundary[word_idx, 0]) /
-                        (word_boundary[word_idx, 2] -
-                         word_boundary[word_idx, 0])
-                    )[0][0]
-                    df_tmp = pd.DataFrame(
-                        [[
-                            subj, sn_idx + 1, num_word, word_idx[0][0] + 1,
-                            fl, fix_dur[fix_idx][0],
-                        ]], columns=['id', 'sn', 'nw', 'wn', 'fl', 'dur'],
-                    )
-                    df = pd.concat([df, df_tmp])
 
     df.to_csv(save_path, sep='\t', index=False)
 
@@ -210,8 +145,6 @@ def ZUCO_read_scanpath(directory, task):
 def load_zuco_word_and_scanpth_data(directory, task):
     if task.startswith('zuco1'):
         directory = directory + 'zuco/'
-    elif task == 'zuco21':
-        directory = directory + 'zuco2/'
     else:
         raise NotImplementedError(f'{task=} unknown')
     directory = os.path.join(directory, f'task{task[-1]}', 'Matlab_files')
@@ -220,33 +153,6 @@ def load_zuco_word_and_scanpth_data(directory, task):
     scanpath_path = directory + '/scanpath.csv'
     scanpath_df = pd.read_csv(scanpath_path, sep='\t')
     return word_infor_df, scanpath_df
-
-
-def add_current_fix_interest_area_label_for_sp(task: str = 'zuco12') -> None:
-    directory = 'data/'
-    word_info_df, eyemovement_df = load_zuco_word_and_scanpth_data(
-        directory=directory, task=task,
-    )
-    if task.startswith('zuco1'):
-        directory = directory + 'zuco/'
-    elif task == 'zuco21':
-        directory = directory + 'zuco2/'
-    else:
-        raise NotImplementedError(f'{task=} unknown')
-    directory = os.path.join(directory, f'task{task[-1]}', 'Matlab_files')
-    scanpath_path = directory + '/scanpath.csv'
-    save_path = scanpath_path
-    eyemovement_df['CURRENT_FIX_INTEREST_AREA_LABEL'] = ''
-    for idx, row in eyemovement_df.iterrows():
-        SN = row.sn
-        NW = row.wn
-        eyemovement_df.at[idx, 'CURRENT_FIX_INTEREST_AREA_LABEL'] = word_info_df.loc[
-            np.logical_and(
-                word_info_df.SN == SN, word_info_df.NW == NW,
-            )
-        ].WORD.values[0]
-
-    eyemovement_df.to_csv(save_path, sep='\t', index=False)
 
 def read_sentence_content(directory, task):
     if task.startswith('zuco1'):
@@ -285,39 +191,6 @@ def read_sentence_content(directory, task):
 
     df.to_csv(save_path, sep='\t', index=False)
 
-def get_scanpath_content(directory, task):
-    word_info_df, scanpath_df = load_zuco_word_and_scanpth_data(
-        directory=directory, task=task,
-    )
-    if task.startswith('zuco1'):
-        directory = directory + 'zuco/'
-    elif task == 'zuco21':
-        directory = directory + 'zuco2/'
-    else:
-        raise NotImplementedError(f'{task=} unknown')
-    directory = os.path.join(directory, f'task{task[-1]}', 'Matlab_files')
-    save_path = directory + '/scanpath_content.csv'
-    # only keep the rows with dur > 50 in scanpath_df
-    scanpath_df = scanpath_df[scanpath_df['dur'] > 50]
-    df = pd.DataFrame([], columns=['id', 'SN', 'CONTENT'])
-    for subj in tqdm(scanpath_df['id'].unique()):
-        for sn in scanpath_df[scanpath_df['id'] == subj]['sn'].unique():
-            # find the word by sn and nw, concatenate the word to the sentence
-            content = ''
-            for wn in scanpath_df[
-                (scanpath_df['id'] == subj) & (scanpath_df['sn'] == sn)
-            ]['wn']:
-                word = word_info_df[
-                    (word_info_df['SN'] == sn) & (word_info_df['NW'] == wn)
-                ]['WORD'].values[0]
-                content += word + ' '
-            df_tmp = pd.DataFrame(
-                [[subj, sn, content]],
-                columns=['id', 'SN', 'CONTENT'],
-            )
-            df = pd.concat([df, df_tmp])
-    df.to_csv(save_path, sep='\t', index=False)
-
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -325,17 +198,14 @@ def main() -> int:
         '--zuco_task',
         type=str,
         choices=[
-            # zuco 1
-            'zuco11', 'zuco12', 'zuco13',
-            # zuco 2
-            'zuco21',
+            'zuco11', 'zuco13',
         ],
     )
     args = parser.parse_args()
-    # print(f'Preparing word info info for {args.zuco_task}...')
+    print(f'Preparing word info info for {args.zuco_task}...')
     path_to_zuco = "data/"
     # create word information for all the sentences in each task, save to csv file in the same task folder
-    # ZUCO_read_words(directory=path_to_zuco, task=args.zuco_task)
+    ZUCO_read_words(directory=path_to_zuco, task=args.zuco_task)
     print(f'Preparing scanpath info for {args.zuco_task}...')
     # create scanpath information for all subjects in each task, save to csv file in the same folder
     ZUCO_read_scanpath(  # 12 subject
@@ -344,8 +214,6 @@ def main() -> int:
     )
     print(f'Preparing sentence content for {args.zuco_task}...')
     read_sentence_content(directory=path_to_zuco, task=args.zuco_task)
-    # print(f'Preparing scanpath content for {args.zuco_task}...')
-    # get_scanpath_content(directory=path_to_zuco, task=args.zuco_task)
 
 
 if __name__ == '__main__':

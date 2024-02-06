@@ -36,9 +36,8 @@ def extract_fixation_data(path, task):
                 list_dur[word-1] = duration
             df_dur = pd.concat([df_dur, pd.DataFrame({'id': subject, 'sid': sentence, 'list_dur': [list_dur.tolist()]})], ignore_index=True)
     df_dur.to_csv(f'data/{task}/fixation_subj.csv', index=False)
-    # df_avg = average_fixation(df_dur)
-    # df_avg.to_csv(f'data/{task}/fixation.csv', index=False)
-
+    df_avg = average_fixation(df_dur)
+    df_avg.to_csv(f'data/{task}/fixation.csv', index=False)
                 
 def main():
     parser = argparse.ArgumentParser()
@@ -46,13 +45,10 @@ def main():
     args = parser.parse_args()
 
     task = args.task
-    task_dict = {'sst': 'task1', 'wiki': 'task3'}
+    task_dict = {'task1': 'sst', 'task3': 'wiki'}
 
-    path = f"data/zuco/{task_dict[task]}/Matlab_files/scanpath.csv"
-    extract_fixation_data(path, task)
-    
+    path = f"data/zuco/{task}/Matlab_files/scanpath.csv"
+    extract_fixation_data(path, task_dict[task]) 
 
 if __name__ == "__main__":
     main()
-
-    
