@@ -9,7 +9,7 @@ pip install -r requirements.txt
 
 ## Download eye-tracking data and prepare the data
 
-Data will be downloaded from the OSF repository[https://osf.io/q3zws/] and saved in the `data/zuco` directory. Run the following script to download and prepare the data:
+Data will be downloaded from the [OSF repository](https://osf.io/q3zws/) and saved in the `data/zuco` directory. Run the following script to download and prepare the data:
 
 ```bash
 pre/get_zuco_data.sh
