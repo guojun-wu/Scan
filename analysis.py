@@ -73,7 +73,7 @@ def subject_analysis(task, model_name):
         # pad the list to the same length
         corr_list += [np.nan] * (len(model_df) - len(corr_list))
         corr_df[subj] = corr_list
-    corr_df.to_csv(f'data/{task}/{model_name}_subj_corr.csv', index=False)    
+    corr_df.to_csv(f'{RESULT_PATH}/{task}/{model_name}_subj_corr.csv', index=False)    
 
 def draw_subject_barplot(task_names=["sst", "wiki"], model_name="gpt2"):
     fig, axs = plt.subplots(1, len(task_names), figsize=(14, 4), sharey=True)
@@ -103,54 +103,12 @@ def draw_subject_barplot(task_names=["sst", "wiki"], model_name="gpt2"):
         axs[j].set_title(task_title[task], fontsize=12)
         axs[j].set_xticks([])
 
-        axs[j].set_ylim(0.1, 0.45)
+        axs[j].set_ylim(0.1, 0.53)
         if j == 0:
             axs[j].set_ylabel('Spearman Correlation', fontsize=12)
 
     plt.tight_layout()
-    plt.savefig(f'{model_name}_subject_correlation.png', dpi=300)
 
     plt.show()
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-t","--task", type=str, default="sst")
-    parser.add_argument("--tuned", type=str, default="finetuned")
-    parser.add_argument("--subject", action="store_true")
-    args = parser.parse_args()
-
-    tuned = args.tuned
-    task = args.task
-    subject = args.subject
-
-    if subject:
-        model_names = ["bert", "gpt2"]
-        for model_name in model_names:
-            subject_analysis(task, model_name)
-        draw_subject_barplot()
-        return
-
-    if tuned == "random":
-        # for every random seed, generate the correlation
-        seeds = [str(i) for i in range(1, 3)]
-        print(seeds)
-        df = read_data(tuned, task)
-        corr_df = get_corr(df)
-        for seed in seeds:
-            tmp_df = read_data(f"random{seed}", task)
-            tmp_corr_df = get_corr(tmp_df)
-            for key in corr_df.keys():
-                corr_df[key] += tmp_corr_df[key]
-        for key in corr_df.keys():
-            corr_df[key] = [x/(len(seeds)+1) for x in corr_df[key]] 
-    else:
-        df = read_data(tuned, task)
-        corr_df = get_corr(df)
-
-    generate_tex(corr_df)
-    # draw_boxplot(corr_df)
-
-
-if __name__ == "__main__":
-    main()
 
