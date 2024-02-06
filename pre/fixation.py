@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 import os
 import ast
-import argparse 
+import argparse
+from CONTANTS import DATA_PATH
 
 def average_fixation(df):
     # average the fixation data of all the subjects
@@ -35,19 +36,19 @@ def extract_fixation_data(path, task):
                 duration = df_word['dur'].sum()
                 list_dur[word-1] = duration
             df_dur = pd.concat([df_dur, pd.DataFrame({'id': subject, 'sid': sentence, 'list_dur': [list_dur.tolist()]})], ignore_index=True)
-    df_dur.to_csv(f'data/{task}/fixation_subj.csv', index=False)
+    df_dur.to_csv(f'{DATA_PATH}/{task}/fixation_subj.csv', index=False)
     df_avg = average_fixation(df_dur)
-    df_avg.to_csv(f'data/{task}/fixation.csv', index=False)
+    df_avg.to_csv(f'{DATA_PATH}/{task}/fixation.csv', index=False)
                 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t','--task', type=str, default='sst')
+    parser.add_argument('-t','--task', type=str, default='task1', help='task1 or task3')
     args = parser.parse_args()
 
     task = args.task
     task_dict = {'task1': 'sst', 'task3': 'wiki'}
 
-    path = f"data/zuco/{task}/Matlab_files/scanpath.csv"
+    path = f"{DATA_PATH}/{task}/Matlab_files/scanpath.csv"
     extract_fixation_data(path, task_dict[task]) 
 
 if __name__ == "__main__":

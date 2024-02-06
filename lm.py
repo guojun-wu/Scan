@@ -4,7 +4,7 @@ import argparse
 import os
 from saliency import *
 from tqdm import tqdm
-from config import *
+from CONTANTS import *
 from transformers import (
     AutoConfig, 
     GPT2Config,
@@ -14,7 +14,6 @@ from transformers import (
 )
 
 def load_model(model_name="gpt2", tuned=False, task="sst"):
-    num_dict = {"sst": 3, "wiki": 9}
     model_dict = {
         "bert": BertForSequenceClassification, 
         "bert_large": BertForSequenceClassification,
@@ -23,26 +22,18 @@ def load_model(model_name="gpt2", tuned=False, task="sst"):
         "gpt2_large": GPT2ForSequenceClassification,
         "distilbert": DistilBertForSequenceClassification,
         "opt": OPTForSequenceClassification}
-    path_dict = {
-        "bert": "bert-base-uncased", 
-        "bert_large": "bert-large-uncased",
-        "roberta": "roberta-base", 
-        "gpt2": "gpt2", 
-        "gpt2_large": "gpt2-large",
-        "distilbert": "distilbert-base-uncased",
-        "opt": "facebook/opt-350m",}
 
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(path_dict[model_name])
 
     # Load model based on model_name
     if tuned == "finetuned":
-        model = model_dict[model_name].from_pretrained(f'checkpoints/{task}_{model_name}', num_labels=num_dict[task])
+        model = model_dict[model_name].from_pretrained(f'{CHECKPOINT_PATH}/{task}_{model_name}', num_labels=num_dict[task])
     elif tuned == "pretrained":
         model = model_dict[model_name].from_pretrained(path_dict[model_name], num_labels=num_dict[task])
         # elif tuned starts with "random"
     elif tuned.startswith("random"):
-        config = AutoConfig.from_pretrained(get_config(model_name), num_labels=num_dict[task])
+        config = AutoConfig.from_pretrained(url_dict[model_name], num_labels=num_dict[task])
         model = model_dict[model_name](config)
         
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -65,9 +56,7 @@ def seq_saliency(text, label, tokenizer, model, task):
     attention_ids = inputs["attention_mask"].squeeze().tolist()
 
     tokens, saliency_matrix, embd_matrix = lm_saliency(model, tokenizer, input_tokens, attention_ids, label_id)
-    # x_grad = input_x_gradient(tokens, text, saliency_matrix, embd_matrix, model, normalize=True)
     l1_grad = l1_grad_norm(tokens, text, saliency_matrix, model, normalize=True)
-    # l2_grad = l2_grad_norm(tokens, text, saliency_matrix, model, normalize=True)
     return l1_grad
 
 def main():
@@ -82,7 +71,7 @@ def main():
     
     tokenizer, model = load_model(model_name, tuned=tuned, task=task)  
 
-    data = pd.read_csv(f"data/{task}/test.csv", sep=",")
+    data = pd.read_csv(f"{DATA_PATH}/{task}/test.csv", sep=",")
     df_saliency = pd.DataFrame(columns=["sid", "l1_grad"])
     
     for i in tqdm(range(len(data))):
@@ -92,8 +81,11 @@ def main():
             "l1_grad": [l1_grad.tolist()],
         })
         df_saliency = pd.concat([df_saliency, new_row], ignore_index=True)
+    
+    if not os.path.exists(f"{RESULT_PATH}/{task}"):
+        os.makedirs(f"{RESULT_PATH}/{task}")
         
-    output_path = f"data/{task}/{model_name}_{tuned}_saliency.csv"
+    output_path = f"{RESULT_PATH}/{task}/{model_name}_{tuned}_saliency.csv"
 
     df_saliency.to_csv(output_path, index=False)
 

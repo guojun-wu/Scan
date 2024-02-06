@@ -1,8 +1,9 @@
 from finetune import *
+from CONTANTS import DATA_PATH, CHECKPOINT_PATH
 
 # Load the model
 def load_test_data(task):
-    test_df = pd.read_csv(f'./data/{task}/test.csv', sep=",")
+    test_df = pd.read_csv(f'{DATA_PATH}/{task}/test.csv', sep=",")
     test_texts = test_df["text"].tolist()
     test_labels = test_df["label"].tolist()
     return test_texts, test_labels
@@ -35,7 +36,6 @@ def test(model, tokenizer, task):
     print(f"Test accuracy: {accuracy:.4f}")
 
 def load_model(model_name, task):
-    # load from checkpoint f"checkpoints/{task}_{model_name}"
     model_dict = {
         "distilbert": "distilbert-base-uncased",
         "bert": "bert-base-uncased", 
@@ -45,7 +45,7 @@ def load_model(model_name, task):
         "bert_large": "bert-large-uncased",
         "gpt2_large": "gpt2-large",
     }
-    model = AutoModelForSequenceClassification.from_pretrained(f"checkpoints/{task}_{model_name}")
+    model = AutoModelForSequenceClassification.from_pretrained(f"{CHECKPOINT_PATH}/{task}_{model_name}")
     tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
     if 'gpt2' in model_name:
         tokenizer.add_special_tokens({'pad_token': '[PAD]'})

@@ -1,11 +1,11 @@
 import argparse
 import os
-
 import h5py
 import numpy as np
 import pandas as pd
 import scipy.io as io
 from tqdm import tqdm
+from CONTANTS import DATA_PATH
 
 # Adapted from ScanDL (Bolliger et al., 2023): https://github.com/DiLi-Lab/ScanDL
 
@@ -203,7 +203,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     print(f'Preparing word info info for {args.zuco_task}...')
-    path_to_zuco = "data/"
+    path_to_zuco = DATA_PATH
     # create word information for all the sentences in each task, save to csv file in the same task folder
     ZUCO_read_words(directory=path_to_zuco, task=args.zuco_task)
     print(f'Preparing scanpath info for {args.zuco_task}...')

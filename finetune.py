@@ -12,6 +12,7 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import argparse
+from CONTANTS import DATA_PATH, CHECKPOINT_PATH, model_dict
 
 class CustomDataset(Dataset):
     def __init__(self, texts, labels, tokenizer, max_length, task):
@@ -46,8 +47,8 @@ class CustomDataset(Dataset):
         return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
 
 def load_data(task):
-    train_df = pd.read_csv(f"data/{task}/train.csv", sep=",")
-    val_df = pd.read_csv(f"data/{task}/val.csv", sep=",")
+    train_df = pd.read_csv(f"{DATA_PATH}/{task}/train.csv", sep=",")
+    val_df = pd.read_csv(f"{DATA_PATH}/{task}/val.csv", sep=",")
     train_texts = train_df["text"].tolist()
     train_labels = train_df["label"].tolist()
     val_texts = val_df["text"].tolist()
@@ -132,7 +133,7 @@ def train(model_name, model, tokenizer, task):
         scheduler.step()
 
     # Save the fine-tuned model
-    model.save_pretrained(f"checkpoints/{task}_{model_name}")
+    model.save_pretrained(f"{CHECKPOINT_PATH}/{task}_{model_name}")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -141,22 +142,10 @@ def main():
     args = parser.parse_args()
     model_name = args.model_name
     task = args.task
-    model_dict = {
-        "distilbert": "distilbert-base-uncased",
-        "bert": "bert-base-uncased", 
-        "roberta": "roberta-base", 
-        "gpt2": "gpt2", 
-        "opt": "facebook/opt-350m",
-        "bert_large": "bert-large-uncased",
-        "gpt2_large": "gpt2-large",
-    }
-    if task == 'sst':
-        num_labels = 3
-    elif task == 'wiki':
-        num_labels = 9
+    
     if model_name in model_dict:
-        model = AutoModelForSequenceClassification.from_pretrained(model_dict[model_name], num_labels=num_labels)
-        tokenizer = AutoTokenizer.from_pretrained(model_dict[model_name])
+        model = AutoModelForSequenceClassification.from_pretrained(path_dict[model_name], num_labels=num_dict[task])
+        tokenizer = AutoTokenizer.from_pretrained(path_dict[model_name])
     # if model_name contains 'gpt2', then use GPT2Tokenizer
     else:
         raise ValueError("Invalid model name")
@@ -168,6 +157,5 @@ def main():
         tokenizer.pad_token_id = padding_token_id
     train(model_name, model, tokenizer, task)
     
-
 if __name__ == '__main__':
     main()

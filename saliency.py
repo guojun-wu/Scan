@@ -18,7 +18,7 @@ from transformers import (
 
 plt.rcParams['figure.figsize'] = [10, 10]
 
-# Adapted from AllenNLP Interpret and Han et al. 2020
+# Adapted from AllenNLP Interpret; Han et al. 2020; Yin and Neubig, 2022
 def register_embedding_list_hook(model, embeddings_list):
     def forward_hook(module, inputs, output):
         embeddings_list.append(output.squeeze(0).clone().cpu().detach().numpy())
