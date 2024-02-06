@@ -136,9 +136,9 @@ def train(model_name, model, tokenizer, task):
     model.save_pretrained(f"{CHECKPOINT_PATH}/{task}_{model_name}")
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-m','--model_name', type=str, default='bert')
+    parser = argparse.ArgumentParser() 
     parser.add_argument('-t','--task', type=str, default='sst')
+    parser.add_argument('-m','--model_name', type=str, default='bert')
     args = parser.parse_args()
     model_name = args.model_name
     task = args.task
