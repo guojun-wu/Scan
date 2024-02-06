@@ -17,7 +17,7 @@ pre/get_zuco_data.sh
 
 ## Fine-tune the model
 
-To fine-tune the model, run the finetune.py script with the appropriate task and model names. Replace task_name and model_name with your specific task and model:
+To fine-tune the model, run the finetune.py script with the appropriate task and model names. Replace task_name and model_name with your specific task {sst, wiki} and model {bert, bert_large, roberta, distilbert, gpt2, gpt2_large, opt}:
 
 ```bash
 python finetune.py  -t task_name -m model_name
