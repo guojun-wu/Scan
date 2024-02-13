@@ -3,7 +3,6 @@ DATA_PATH = "data"
 CHECKPOINT_PATH = "checkpoints" 
 RESULT_PATH = "results" 
 
-
 url_dict = {
         "gpt2": "https://huggingface.co/gpt2/resolve/main/config.json",
         "gpt2_large": "https://huggingface.co/gpt2-large/resolve/main/config.json",
