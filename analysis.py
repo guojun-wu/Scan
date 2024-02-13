@@ -20,16 +20,8 @@ name_dict = {
 }
 
 
-def read_data(tuned, task):
-    models = [
-        "bert",
-        "bert_large",
-        "roberta",
-        "distilbert",
-        "gpt2",
-        "gpt2_large",
-        "opt",
-    ]
+def read_data(tuned, task, models):
+    
     fix_df = pd.read_csv(f"{RESULT_PATH}/{task}/fixation.csv", sep=",")
     df = fix_df.rename(columns={"list_dur": "fixation"})
     for model in models:

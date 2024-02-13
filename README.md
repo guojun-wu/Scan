@@ -25,7 +25,7 @@ python finetune.py  -t task_name -m model_name
 
 ## Get gradient-based saliency
 
-The gradient-based saliency can be obtained using the lm.py script. Use the --tuned flag to indicate whether the model is fine-tuned, pre-trained, or randomly initialized. Replace task_name and model_name with your specific task and model. For example:
+The gradient-based saliency can be obtained using the lm.py script. Use the --tuned flag to indicate whether the model is fine-tuned, pre-trained, or randomly initialized, selecting from options such as {fine-tuned, pre-trained, random}. Replace task_name and model_name with your specific task and model. For example:
 
 ```bash
 python lm.py -t task_name -m model_name --tuned finetuned
