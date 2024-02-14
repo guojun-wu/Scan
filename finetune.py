@@ -57,6 +57,7 @@ def load_data(task):
     return train_texts, val_texts, train_labels, val_labels
 
 def train(model_name, model, tokenizer, task):
+    torch.manual_seed(random_seed) 
     train_texts, val_texts, train_labels, val_labels = load_data(task)
 
     train_dataset = CustomDataset(train_texts, train_labels, tokenizer, max_length=128, task=task)
@@ -155,7 +156,8 @@ def main():
         padding_token_id = tokenizer.convert_tokens_to_ids('[PAD]')
         model.config.pad_token_id = padding_token_id
         tokenizer.pad_token_id = padding_token_id
-    train(model_name, model, tokenizer, task)
+    random_seed = 42 
+    train(model_name, model, tokenizer, task, random_seed)
     
 if __name__ == '__main__':
     main()
